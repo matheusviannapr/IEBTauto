@@ -136,26 +136,46 @@ def calcular_disjuntor_qgbt(disjuntores_gerais, tabela_fator_demanda_qgbt, tensa
     disjuntor_qgbt = corrente_ajustada
     return disjuntor_qgbt
 
-def distribuir_fases(circuitos):
+def distribuir_fases(circuitos, fases_qd):
     carga_fase = {'R': 0, 'S': 0, 'T': 0}
+    
     for circuito in circuitos:
         num_fases = circuito['num_fases']
         potencia = circuito['potencia']
-        if num_fases == 1:
-            fase = min(carga_fase, key=carga_fase.get)
-            carga_fase[fase] += potencia
-            circuito['Fases'] = fase
-        elif num_fases == 2:
-            fases = sorted(carga_fase, key=carga_fase.get)[:2]
-            carga_fase[fases[0]] += potencia / 2
-            carga_fase[fases[1]] += potencia / 2
-            circuito['Fases'] = fases[0] + fases[1]
-        elif num_fases == 3:
-            carga_fase['R'] += potencia / 3
-            carga_fase['S'] += potencia / 3
-            carga_fase['T'] += potencia / 3
-            circuito['Fases'] = 'RST'
+        
+        if fases_qd == 3:
+            if num_fases == 1:
+                fase = min(carga_fase, key=carga_fase.get)
+                carga_fase[fase] += potencia
+                circuito['Fases'] = fase
+            elif num_fases == 2:
+                fases = sorted(carga_fase, key=carga_fase.get)[:2]
+                carga_fase[fases[0]] += potencia / 2
+                carga_fase[fases[1]] += potencia / 2
+                circuito['Fases'] = fases[0] + fases[1]
+            elif num_fases == 3:
+                carga_fase['R'] += potencia / 3
+                carga_fase['S'] += potencia / 3
+                carga_fase['T'] += potencia / 3
+                circuito['Fases'] = 'RST'
+        
+        elif fases_qd == 2:
+            if num_fases == 1:
+                fase = min(['R', 'S'], key=lambda f: carga_fase[f])
+                carga_fase[fase] += potencia
+                circuito['Fases'] = fase
+            elif num_fases == 2:
+                carga_fase['R'] += potencia / 2
+                carga_fase['S'] += potencia / 2
+                circuito['Fases'] = 'RS'
+        
+        elif fases_qd == 1:
+            if num_fases == 1:
+                carga_fase['R'] += potencia
+                circuito['Fases'] = 'R'
+    
     return circuitos
+
 
 def encontrar_disjuntor_menor(corrente, tabela_disjuntores):
     tabela_disjuntores_ordenada = tabela_disjuntores.sort_values(by='Corrente nominal', ascending=False)
@@ -335,6 +355,12 @@ def gerar_diagrama_unifilar(exemplos_circuitos):
     df_ordenado_unifilar = ordenar_por_nome(df_unifilar)
     x_offset = 0
     y_offset = 0
+
+    min_x = float('inf')
+    min_y = float('inf')
+    max_x = float('-inf')
+    max_y = float('-inf')
+
     for index, row in df_ordenado_unifilar.iterrows():
         if row['num_fases'] == 1:
             disjuntor_filename = 'Disjuntor_mono.dxf'
@@ -363,6 +389,19 @@ def gerar_diagrama_unifilar(exemplos_circuitos):
         insert_point_fios = (x_offset + 70, y_offset + 30)
         insert_dxf_block_with_attributes(msp, fios_filename, fios_block_name, insert_point_fios, fios_attributes)
         y_offset -= 30
+
+    min_x = -70
+    min_y = y_offset
+    max_x = 90
+    max_y = 90
+    padding = 10
+    msp.add_lwpolyline([
+        (min_x - padding, max_y + padding),
+        (max_x + padding, max_y + padding),
+        (max_x + padding, min_y - padding),
+        (min_x - padding, min_y - padding),
+        (min_x - padding, max_y + padding)
+    ], close=True)
     output_path = 'diagrama_unifilar_ajustado.dxf'
     doc.saveas(output_path)
     return output_path
@@ -388,11 +427,56 @@ def reordenar_colunas(df):
     return df.reindex(columns=ordem_colunas)
 
 
+sample_data = {
+    "Nome": ["Circuito 1", "Circuito 2", "Circuito 3"],
+    "Potência": [1000, 1500, 2000],
+    "tensão": [220, 380, 220],
+    "fator_potencia": [0.95, 0.9, 0.85],
+    "num_fases": [1, 3, 1],
+    "temperatura": [30, 35, 25],
+    "num_circuitos": [2, 3, 1],
+    "comprimento": [0.1, 0.2, 0.15],
+    "met_instala": ["3 condutores carregados – método B1 ( Amperes)", "3 condutores carregados – método B1 ( Amperes)", "3 condutores carregados – método B1 ( Amperes)"],
+    "Quadro": ["Q1", "Q1", "Q1"]
+}
+
+example_template = pd.DataFrame(sample_data)
+
 # Interface do Streamlit
 st.title('Calculadora de Parâmetros de Circuitos Elétricos')
+st.markdown("""
+Aqui está um exemplo de planilha que você pode usar como modelo. Faça o download e edite conforme suas necessidades.
+""")
+example_template = st.data_editor(example_template)
+file_path = 'sample_circuitos.xlsx'
+
+# Provide download link for the existing Excel file
+with open(file_path, 'rb') as file:
+    st.download_button(
+        label="Baixar Modelo Excel",
+        data=file,
+        file_name='sample_circuitos.xls',
+        mime='application/vnd.ms-excel'
+    )
 data_sheets = pd.read_excel('Dados para o gpt.xls', sheet_name=None)
 uploaded_file_dados = {sheet_name: data_sheets[sheet_name] for sheet_name in data_sheets}
-uploaded_file_circuitos = st.file_uploader("Escolha o arquivo de circuitos", type=["xls", "xlsx"])
+uploaded_file_circuitos = st.file_uploader("Escolha o arquivo de circuitos para realizar o dimensionamento", type=["xls", "xlsx"])
+st.sidebar.header("Configuração de Alimentação")
+tipo_alimentacao = st.sidebar.selectbox(
+    "Selecione o tipo de alimentação geral:",
+    ("Trifásica", "Monofásica", "Bifásica")
+)
+if tipo_alimentacao == "Trifásica":
+    fases_QD = 3
+    # Adicione sua lógica para trifásico aqui
+elif tipo_alimentacao == "Monofásica":
+    fases_QD = 1
+    # Adicione sua lógica para monofásico aqui
+elif tipo_alimentacao == "Bifásica":
+    fases_QD = 2
+
+
+
 
 if uploaded_file_dados and uploaded_file_circuitos:
     data_tables = uploaded_file_dados
@@ -400,7 +484,8 @@ if uploaded_file_dados and uploaded_file_circuitos:
         exemplos_circuitos = ler_circuitos_de_excel(uploaded_file_circuitos)
         #exemplos_circuitos = reordenar_colunas(exemplos_circuitos)
         exemplos_circuitos = st.data_editor(exemplos_circuitos)
-        exemplos_circuitos=distribuir_fases(exemplos_circuitos)
+        
+        exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
 
         if exemplos_circuitos is not None and st.button('Calcular Parâmetros'):
             for circuito in exemplos_circuitos:
