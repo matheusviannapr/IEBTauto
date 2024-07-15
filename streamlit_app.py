@@ -483,6 +483,9 @@ if uploaded_file_dados and uploaded_file_circuitos:
     if data_tables is not None:
         exemplos_circuitos = ler_circuitos_de_excel(uploaded_file_circuitos)
         #exemplos_circuitos = reordenar_colunas(exemplos_circuitos)
+        st.markdown("""
+Aqui você pode editar os valores de sua planilha.
+""")
         exemplos_circuitos = st.data_editor(exemplos_circuitos)
         
         exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
