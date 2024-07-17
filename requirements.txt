@@ -1,6 +1,6 @@
-streamlit
-pandas
 numpy
+pandas
 ezdxf
-openpyxl
-xlrd
+streamlit
+mitosheet
+pylatex
