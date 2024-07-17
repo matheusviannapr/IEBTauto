@@ -595,7 +595,7 @@ st.header('Etapa Inicial')
 st.markdown("""
 Aqui está um exemplo de planilha que você deve usar como modelo. Faça o download e edite conforme suas necessidades. 
 """)
-file_path = 'sample_circuitos.xlsx'
+file_path = 'sample_circuitos.xls'
 
 # Provide download link for the existing Excel file
 with open(file_path, 'rb') as file:
