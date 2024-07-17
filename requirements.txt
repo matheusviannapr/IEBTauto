@@ -4,3 +4,4 @@ ezdxf
 streamlit
 mitosheet
 pylatex
+xlrd
