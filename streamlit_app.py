@@ -547,7 +547,7 @@ sample_data = {
 example_template = pd.DataFrame(sample_data)
 
 # Interface do Streamlit
-st.title('Calculadora de circuitos Elétricos de Baixa Tensão - NBR 5410')
+st.title('Calculadora de Circuitos Elétricos de Baixa Tensão - NBR 5410')
 with st.expander(("Sobre a Calculadora")):
     st.markdown((
         """
