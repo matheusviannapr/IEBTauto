@@ -294,7 +294,7 @@ def formatar_tabela_latex(circuitos, disjuntores_gerais, disjuntor_qgbt):
     tabela_latex += "Nome do Circuito & Potência (W) & Tensão (V) & FP & Nº de Fases & Temp (°C) & Nº de Circuitos & Comprimento (km) & Condutor(mm²) & Disjuntor(A) & delta (V) & Fases & Quadro \\\\ \\hline\n"
     circuitos_ordenados = sorted(circuitos, key=lambda x: x['nome'])
     for circuito in circuitos_ordenados:
-        linha = f"{circuito['nome']} & {circuito['potencia']} & {circuito['tensao']} & {circuito['fator_potencia']} & {circuito['num_fases']} & {circuito['temperatura']} & {circuito['num_circuitos']} & {circuito['comprimento']} & {circuito['Seção do Condutor (mm²)']} & {circuito['Disjuntor (Ampere)']} & {circuito['Queda de Tensão (Volts)']} & {circuito['Fases']} & {circuito['Quadro']} \\\\ \\hline\n"
+        linha = f"{circuito['nome']} & {circuito['potencia']} & {circuito['tensao']} & {circuito['fator_potencia']} & {circuito['num_fases']} & {circuito['temperatura']} & {circuito['num_circuitos']} & {circuito['comprimento']} & {circuito['Seção do Condutor (mm²)']} & {circuito['Disjuntor (Ampere)']} & {round(circuito['Queda de Tensão (Volts)'],2)} & {circuito['Fases']} & {circuito['Quadro']} \\\\ \\hline\n"
         tabela_latex += linha
     tabela_latex += "\\end{tabular}\n\n"
     tabela_latex += "\\begin{tabular}{|l|l|}\n\\hline\n"
@@ -321,11 +321,14 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         comprimento = circuito['comprimento']
         resultado = resultados_circuitos.loc[resultados_circuitos['Nome do Circuito'] == nome].iloc[0]
         corrente_nominal = resultado['Corrente Nominal']
+        corrente_nominal = round(corrente_nominal, 2)
         fator_agrupamento = resultado['Fator Agrupamento']
         fator_correcao_temp = resultado['Fator correção temperatura']
         corrente_corrigida = resultado['Corrente corrigida']
+        corrente_corrigida = round(corrente_corrigida, 2)
         valor_queda_tensao = tabela_queda_tensao.loc[tabela_queda_tensao['seção do condutor'] == secao_condutor, 'Queda de tensão (V/A.km)'].iloc[0]
         queda_tensao = valor_queda_tensao * corrente_nominal * comprimento
+        queda_tensao = round(queda_tensao,2)
         n_factor = '0' if num_fases == 1 else '1' if num_fases == 2 else '2'
         latex_content += f"\\subsection*{{Circuito: {nome}}}\n"
         latex_content += "\\begin{itemize}\n"
@@ -595,7 +598,7 @@ st.header('Etapa Inicial')
 st.markdown("""
 Aqui está um exemplo de planilha que você deve usar como modelo. Faça o download e edite conforme suas necessidades. 
 """)
-file_path = 'sample_circuitos.xls'
+file_path = 'sample_circuitos.xlsx'
 
 # Provide download link for the existing Excel file
 with open(file_path, 'rb') as file:
