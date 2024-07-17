@@ -3,7 +3,11 @@ import pandas as pd
 import ezdxf
 import streamlit as st
 from io import BytesIO
-
+from ezdxf.enums import TextEntityAlignment
+from mitosheet.streamlit.v1 import spreadsheet
+from pylatex import Document, Section, Command
+from pylatex.utils import NoEscape
+import requests
 # Funções para cálculos elétricos
 def calcular_corrente_nominal(potencia, tensao, fator_potencia, num_fases):
     if num_fases == 1:
@@ -96,6 +100,9 @@ def calcular_parametros_circuitos(lista_circuitos, data_tables):
             "Corrente Nominal": corrente_nominal,
             "Fator correção temperatura": fator_correcao_temp,
             "Fator Agrupamento": fator_agrupamento,
+            "Número de fases" : circuito['num_fases'],
+            "Comprimento": circuito['comprimento']
+
         })
 
         # Atualizando circuito com novos dados
@@ -245,10 +252,6 @@ def cruzar_listas_materiais(materiais_necessarios, materiais_existentes):
 def ler_circuitos_de_excel(file_path):
     circuito_data = pd.read_excel(file_path)
     circuitos = circuito_data.to_dict(orient='records')
-    for circuito in circuitos:
-        circuito['nome'] = circuito.pop('Nome')
-        circuito['potencia'] = circuito.pop('Potência')
-        circuito['tensao'] = circuito.pop('tensão')
     return circuitos
 
 # Função para carregar dados
@@ -321,14 +324,25 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
     return latex_content
 
 def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_gerais, disjuntor_qgbt, data_tables):
-    from pylatex import Document, Section, Command
-    from pylatex.utils import NoEscape
     doc = Document()
     tabela_latex = formatar_tabela_latex(circuitos, disjuntores_gerais, disjuntor_qgbt)
     doc.append(NoEscape(tabela_latex))
     memcal = memcalc(circuitos, resultados, data_tables['queda de tensão'])
     doc.append(NoEscape(memcal))
-    doc.generate_pdf(caminho_salvar, clean_tex=False)
+    # Salvar o arquivo .tex
+    doc.generate_tex(caminho_salvar)
+
+def compile_tex_online(tex_content):
+    url = "https://latexonline.cc/compile"
+    params = {
+        "text": tex_content,  # Enviando o conteúdo do arquivo .tex
+        "command": "pdflatex"
+    }
+    response = requests.post(url, params=params)
+    if response.status_code == 200:
+        return response.content  # Retornando o conteúdo do PDF gerado
+    else:
+        return None
 
 def adicionar_unidades(df):
     df['potencia'] = df['potencia'].astype(str) + ' W'
@@ -344,66 +358,86 @@ def ordenar_por_nome(df):
 doc = ezdxf.new(dxfversion='R2010')
 msp = doc.modelspace()
 def gerar_diagrama_unifilar(exemplos_circuitos):
-    df_unifilar = pd.DataFrame({
-        'num_fases': [circuito['num_fases'] for circuito in exemplos_circuitos],
-        'nome': [circuito['nome'] for circuito in exemplos_circuitos],
-        'potencia': [f"{circuito['potencia']} W" for circuito in exemplos_circuitos],
-        'Seção do Condutor (mm²)': [f"{circuito['Seção do Condutor (mm²)']} mm2" for circuito in exemplos_circuitos],
-        'Disjuntor (Ampere)': [f"{circuito['Disjuntor (Ampere)']} A" for circuito in exemplos_circuitos],
-        'Fases': [circuito['Fases'] for circuito in exemplos_circuitos]
-    })
-    df_ordenado_unifilar = ordenar_por_nome(df_unifilar)
+    # Agrupa os circuitos pelo quadro
+    if not isinstance(exemplos_circuitos, pd.DataFrame):
+        exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
+    quadros = exemplos_circuitos.groupby('Quadro')
+    
     x_offset = 0
     y_offset = 0
+    y_offset_last=50
+    for nome_quadro, df_quadro in quadros:
+        # Adiciona um bloco para o quadro
+        
+        y_offset -= 50  # Espaçamento entre o quadro e seus circuitos
 
-    min_x = float('inf')
-    min_y = float('inf')
-    max_x = float('-inf')
-    max_y = float('-inf')
+        df_unifilar = pd.DataFrame({
+            'num_fases': [circuito['num_fases'] for circuito in df_quadro.to_dict('records')],
+            'nome': [circuito['nome'] for circuito in df_quadro.to_dict('records')],
+            'potencia': [f"{circuito['potencia']} W" for circuito in df_quadro.to_dict('records')],
+            'Seção do Condutor (mm²)': [f"{circuito['Seção do Condutor (mm²)']} mm2" for circuito in df_quadro.to_dict('records')],
+            'Disjuntor (Ampere)': [f"{circuito['Disjuntor (Ampere)']} A" for circuito in df_quadro.to_dict('records')],
+            'Fases': [circuito['Fases'] for circuito in df_quadro.to_dict('records')]
+        })
+        df_ordenado_unifilar = ordenar_por_nome(df_unifilar)
 
-    for index, row in df_ordenado_unifilar.iterrows():
-        if row['num_fases'] == 1:
-            disjuntor_filename = 'Disjuntor_mono.dxf'
-            disjuntor_block_name = 'Disjuntor_Mono'
-            fios_filename = 'fios_mono.dxf'
-            fios_block_name = 'Fios_Mono'
-        elif row['num_fases'] == 2:
-            disjuntor_filename = 'Disjuntor_bi.dxf'
-            disjuntor_block_name = 'Disjuntor_Bi'
-            fios_filename = 'fios_bi.dxf'
-            fios_block_name = 'Fios_Bi'
-        elif row['num_fases'] == 3:
-            disjuntor_filename = 'Disjuntor_tri.dxf'
-            disjuntor_block_name = 'Disjuntor_Tri'
-            fios_filename = 'fios_tri.dxf'
-            fios_block_name = 'Fios_Tri'
-        disjuntor_attributes = {'corrente': str(row['Disjuntor (Ampere)'])}
-        fios_attributes = {
-            'seção': str(row['Seção do Condutor (mm²)']),
-            'Potência': str(row['potencia']),
-            'nome': row['nome'],
-            'fases': row['Fases']
-        }
-        insert_point_disjuntor = (x_offset, y_offset)
-        insert_dxf_block_with_attributes(msp, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes)
-        insert_point_fios = (x_offset + 70, y_offset + 30)
-        insert_dxf_block_with_attributes(msp, fios_filename, fios_block_name, insert_point_fios, fios_attributes)
-        y_offset -= 30
+        quadro_min_x = float('inf')
+        quadro_min_y = float('inf')
+        quadro_max_x = float('-inf')
+        quadro_max_y = float('-inf')
+        for index, row in df_ordenado_unifilar.iterrows():
+            if row['num_fases'] == 1:
+                disjuntor_filename = 'Disjuntor_mono.dxf'
+                disjuntor_block_name = 'Disjuntor_Mono'
+                fios_filename = 'fios_mono.dxf'
+                fios_block_name = 'Fios_Mono'
+            elif row['num_fases'] == 2:
+                disjuntor_filename = 'Disjuntor_bi.dxf'
+                disjuntor_block_name = 'Disjuntor_Bi'
+                fios_filename = 'fios_bi.dxf'
+                fios_block_name = 'Fios_Bi'
+            elif row['num_fases'] == 3:
+                disjuntor_filename = 'Disjuntor_tri.dxf'
+                disjuntor_block_name = 'Disjuntor_Tri'
+                fios_filename = 'fios_tri.dxf'
+                fios_block_name = 'Fios_Tri'
+            disjuntor_attributes = {'corrente': str(row['Disjuntor (Ampere)'])}
+            fios_attributes = {
+                'seção': str(row['Seção do Condutor (mm²)']),
+                'Potência': str(row['potencia']),
+                'nome': row['nome'],
+                'fases': row['Fases']
+            }
+            insert_point_disjuntor = (x_offset, y_offset)
+            insert_dxf_block_with_attributes(msp, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes)
+            insert_point_fios = (x_offset + 70, y_offset + 30)
+            insert_dxf_block_with_attributes(msp, fios_filename, fios_block_name, insert_point_fios, fios_attributes)
+            y_offset -= 30
+            
 
-    min_x = -70
-    min_y = y_offset
-    max_x = 90
-    max_y = 90
-    padding = 10
-    msp.add_lwpolyline([
-        (min_x - padding, max_y + padding),
-        (max_x + padding, max_y + padding),
-        (max_x + padding, min_y - padding),
-        (min_x - padding, min_y - padding),
-        (min_x - padding, max_y + padding)
-    ], close=True)
+            quadro_min_x = -70
+            quadro_min_y = y_offset
+            quadro_max_x = 90
+            quadro_max_y = y_offset_last-30
+    
+            
+        y_offset_last=y_offset-30
+        # Adiciona o retângulo em torno do quadro
+        padding = 10
+        msp.add_text(nome_quadro, dxfattribs={'height': 10}).set_placement((quadro_min_x-padding, quadro_max_y + 20), align=TextEntityAlignment.TOP_LEFT)
+        msp.add_lwpolyline([
+            (quadro_min_x - padding, quadro_max_y + padding),
+            (quadro_max_x + padding, quadro_max_y + padding),
+            (quadro_max_x + padding, quadro_min_y - padding),
+            (quadro_min_x - padding, quadro_min_y - padding),
+            (quadro_min_x - padding, quadro_max_y + padding)
+        ], close=True)
+
+        y_offset -= 70  # Espaçamento entre diferentes quadros
+
     output_path = 'diagrama_unifilar_ajustado.dxf'
     doc.saveas(output_path)
+    
     return output_path
 
 def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_point, attributes):
@@ -428,11 +462,11 @@ def reordenar_colunas(df):
 
 
 sample_data = {
-    "Nome": ["Circuito 1", "Circuito 2", "Circuito 3"],
-    "Potência": [1000, 1500, 2000],
-    "tensão": [220, 380, 220],
+    "nome": ["Circuito 1", "Circuito 2", "Circuito 3"],
+    "potencia": [1000, 1500, 2000],
+    "tensao": [220, 127, 220],
     "fator_potencia": [0.95, 0.9, 0.85],
-    "num_fases": [1, 3, 1],
+    "num_fases": [1, 1, 1],
     "temperatura": [30, 35, 25],
     "num_circuitos": [2, 3, 1],
     "comprimento": [0.1, 0.2, 0.15],
@@ -443,11 +477,33 @@ sample_data = {
 example_template = pd.DataFrame(sample_data)
 
 # Interface do Streamlit
-st.title('Calculadora de Parâmetros de Circuitos Elétricos')
+st.title('Calculadora de circuitos Elétricos de Baixa Tensão - NBR 5410')
+with st.expander(("Sobre a Calculadora")):
+    st.markdown((
+        """
+    A Calculadora de Circuitos Elétricos é uma ferramenta para engenheiros e técnicos que trabalham no setor elétrico, especialmente aqueles focados em instalações de baixa tensão. Esta calculadora é desenvolvida com base na norma brasileira NBR 5410, garantindo que todos os cálculos e projetos estejam em conformidade com as regulamentações e padrões de segurança vigentes.
+
+    ## Funcionalidades Principais
+
+    ### 1. Exportação de Diagrama Unifilar
+    A calculadora gera diagramas unifilares precisos e detalhados. Estes diagramas são fundamentais para a visualização clara dos circuitos elétricos, mostrando as conexões entre os componentes e facilitando a interpretação e execução do projeto.
+
+    ### 2. Memória de Cálculo em LaTeX
+    Uma das funcionalidades mais avançadas é a capacidade de exportar a memória de cálculo em LaTeX. Isso proporciona um documento profissional e bem formatado, que pode ser facilmente integrado a relatórios técnicos e documentos oficiais.
+
+    ### 3. Resolução de Circuitos
+    A calculadora resolve automaticamente os circuitos elétricos, levando em consideração todos os parâmetros necessários, como correntes, tensões e potências. Isso assegura a precisão e eficiência no dimensionamento dos circuitos.
+
+    ### 4. Lista de Materiais
+    Ao final do processo, a ferramenta fornece uma lista completa de materiais necessários para a execução do projeto. Esta lista inclui todos os componentes, suas especificações e quantidades, facilitando a aquisição e logística dos materiais.
+
+    """
+    ))
+
+st.header('Etapa Inicial')
 st.markdown("""
-Aqui está um exemplo de planilha que você pode usar como modelo. Faça o download e edite conforme suas necessidades.
+Aqui está um exemplo de planilha que você deve usar como modelo. Faça o download e edite conforme suas necessidades. 
 """)
-example_template = st.data_editor(example_template)
 file_path = 'sample_circuitos.xlsx'
 
 # Provide download link for the existing Excel file
@@ -458,6 +514,7 @@ with open(file_path, 'rb') as file:
         file_name='sample_circuitos.xls',
         mime='application/vnd.ms-excel'
     )
+st.warning('Não mudar o nome das colunas na planilha modelo')
 data_sheets = pd.read_excel('Dados para o gpt.xls', sheet_name=None)
 uploaded_file_dados = {sheet_name: data_sheets[sheet_name] for sheet_name in data_sheets}
 uploaded_file_circuitos = st.file_uploader("Escolha o arquivo de circuitos para realizar o dimensionamento", type=["xls", "xlsx"])
@@ -475,22 +532,56 @@ elif tipo_alimentacao == "Monofásica":
 elif tipo_alimentacao == "Bifásica":
     fases_QD = 2
 
+st.sidebar.header("Sobre o Autor")
+st.sidebar.markdown("""
+Este aplicativo foi desenvolvido por [Matheus Vianna](https://matheusvianna.com). Engenheiro Eletricista com especialização em Ciência de Dados. Confira meu site clicando no meu nome!
+""")
+st.sidebar.header("__Doação__")
+st.sidebar.markdown("""
+Se você gostou do programa e quer apoiar o desenvolvimento deste e de outros aplicativos, considere fazer uma doação:
+- **Pix:** matheusviannapr@gmail.com
+""")
 
 
 
+
+
+seção_neutro_map = {
+    25: 25,
+    35: 35,
+    50: 35,
+    70: 50,
+    95: 50,
+    120: 70,
+    150: 70,
+    185: 95,
+    240: 120,
+    300: 150,
+    400: 185
+}
+
+seção_terra_map = {
+    25: 16,
+    35: 16,
+    50: 25,
+    70: 35,
+    95: 50,
+    120: 70,
+    150: 95,
+    185: 95,
+    240: 120,
+    300: 150
+    }
+    
 if uploaded_file_dados and uploaded_file_circuitos:
     data_tables = uploaded_file_dados
     if data_tables is not None:
         exemplos_circuitos = ler_circuitos_de_excel(uploaded_file_circuitos)
         #exemplos_circuitos = reordenar_colunas(exemplos_circuitos)
-        st.markdown("""
-Aqui você pode editar os valores de sua planilha.
-""")
-        exemplos_circuitos = st.data_editor(exemplos_circuitos)
-        
-        exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
+        spreadsheet(exemplos_circuitos)
 
         if exemplos_circuitos is not None and st.button('Calcular Parâmetros'):
+            exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
             for circuito in exemplos_circuitos:
                 circuito['queda_tensao_max_admitida'] = 0.05 * circuito['tensao']
             resultados_circuitos, exemplos_circuitos = calcular_parametros_circuitos(exemplos_circuitos, data_tables)
@@ -501,10 +592,29 @@ Aqui você pode editar os valores de sua planilha.
             output.seek(0)
             st.download_button(label="Baixar Resultados", data=output, file_name='resultados_circuitos.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             st.subheader('Tabela de Materiais')
-            df_selecionado = resultados_circuitos[['Nome do Circuito', 'Seção do Condutor (mm²)', 'Disjuntor']]
+            df_selecionado = resultados_circuitos[['Nome do Circuito', 'Seção do Condutor (mm²)', 'Disjuntor','Comprimento','Número de fases']]
+            df_selecionado['Quantidade de condutor fase'] = df_selecionado['Comprimento'] * df_selecionado['Número de fases']
+            # Adicionar coluna para "Seção do Condutor Neutro" com regra de s <= 25
+            df_selecionado['Seção do Condutor Neutro (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
+                lambda x: x if x <= 25 else seção_neutro_map.get(x, x)
+            )
+            # Adicionar coluna para "comprimento neutro"
+            df_selecionado['Comprimento neutro'] = df_selecionado['Comprimento']
+            # Adicionar coluna para "Seção do Condutor de Terra" com regra de s <= 16
+            df_selecionado['Seção do Condutor de Terra (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
+                lambda x: x if x <= 16 else seção_terra_map.get(x, x)
+            )
+            # Adicionar coluna para "comprimento terra"
+            df_selecionado['Comprimento terra'] = df_selecionado['Comprimento']
             st.write(df_selecionado)
             output_path = gerar_diagrama_unifilar(exemplos_circuitos)
             st.success(f"Diagrama salvo em {output_path}")
             st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
+            caminho_arquivo = 'memcalc'  # Caminho completo do arquivo latex ser gerado
+            disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
+            disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
+            criar_relatorio_latex(exemplos_circuitos, resultados_circuitos, caminho_arquivo,disjuntoresgerais,disjQGBT,data_tables)
+            st.download_button(label="Baixar Memorial Descritivo", data=open('memcalc.tex', "rb").read(), file_name='memcalc.tex')
+            
 else:
     st.warning('Por favor, faça o upload dos arquivos necessários para calcular os parâmetros dos circuitos.')
