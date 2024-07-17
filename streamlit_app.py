@@ -7,6 +7,7 @@ from ezdxf.enums import TextEntityAlignment
 from mitosheet.streamlit.v1 import spreadsheet
 from pylatex import Document, Section, Command, Package, Subsection
 from pylatex.utils import NoEscape
+import requests
 # Funções para cálculos elétricos
 def calcular_corrente_nominal(potencia, tensao, fator_potencia, num_fases):
     if num_fases == 1:
@@ -50,12 +51,32 @@ def encontrar_capacidade_corrente(secao_condutor, tabela_capacidade, metodo_inst
     capacidade = tabela_capacidade.loc[tabela_capacidade['Seção do condutor'] == secao_condutor, coluna_capacidade].iloc[0]
     return capacidade
 
-def determinar_disjuntor(corrente_corrigida, secao_final, tabela_disjuntores, tabela_capacidade, metodo_instalacao):
+def determinar_disjuntor(corrente_corrigida, secao_final, tabela_disjuntores, tabela_capacidade, metodo_instalacao, numero_fases):
     capacidade_condutor = encontrar_capacidade_corrente(secao_final, tabela_capacidade, metodo_instalacao)
-    tabela_disjuntores_ordenada = tabela_disjuntores.sort_values(by='Corrente nominal')
+    
+    # Definindo o tipo de disjuntor baseado no número de fases
+    if numero_fases == 1:
+        tipo_disjuntor = 'Monopolar'
+    elif numero_fases == 2:
+        tipo_disjuntor = 'Bipolar'
+    elif numero_fases == 3:
+        tipo_disjuntor = 'Tripolar'
+    else:
+        raise ValueError("Número de fases inválido. Deve ser 1, 2 ou 3.")
+    
+    # Filtrando a tabela de disjuntores de acordo com o tipo
+    tabela_disjuntores_filtrada = tabela_disjuntores[tabela_disjuntores['Tipo de disjuntor'] == tipo_disjuntor]
+    
+    # Ordenando a tabela filtrada pela corrente nominal
+    tabela_disjuntores_ordenada = tabela_disjuntores_filtrada.sort_values(by='Corrente nominal')
+    
+    # Iterando pela tabela ordenada para encontrar o disjuntor adequado
     for index, disjuntor in tabela_disjuntores_ordenada.iterrows():
         if corrente_corrigida < disjuntor['Corrente nominal'] < capacidade_condutor:
             return disjuntor['Corrente nominal']
+    
+    # Caso não encontre um disjuntor adequado
+    return None
 
 def calcular_queda_tensao(corrente_nominal, comprimento, secao_condutor, tabela_queda_tensao):
     valor_queda_tensao = tabela_queda_tensao.loc[tabela_queda_tensao['seção do condutor'] == secao_condutor, 'Queda de tensão (V/A.km)'].iloc[0]
@@ -88,7 +109,7 @@ def calcular_parametros_circuitos(lista_circuitos, data_tables):
 
         secao_inicial = determinar_secao_condutor(corrente_corrigida, data_tables['Capacidade de corrente'], circuito['met_instala'])
         secao_final, queda_tensao_final = ajustar_condutor_queda_tensao(corrente_nominal, circuito['comprimento'], secao_inicial, circuito['queda_tensao_max_admitida'], data_tables['Capacidade de corrente'], data_tables['queda de tensão'])
-        disjuntor = determinar_disjuntor(corrente_corrigida, secao_final, data_tables['valores nominais de disjuntores'], data_tables['Capacidade de corrente'], circuito['met_instala'])
+        disjuntor = determinar_disjuntor(corrente_corrigida, secao_final, data_tables['valores nominais de disjuntores'], data_tables['Capacidade de corrente'], circuito['met_instala'],circuito['num_fases'])
 
         resultados.append({
             "Nome do Circuito": circuito['nome'],
@@ -547,7 +568,7 @@ sample_data = {
 example_template = pd.DataFrame(sample_data)
 
 # Interface do Streamlit
-st.title('Calculadora de Circuitos Elétricos de Baixa Tensão - NBR 5410')
+st.title('Calculadora de circuitos Elétricos de Baixa Tensão - NBR 5410')
 with st.expander(("Sobre a Calculadora")):
     st.markdown((
         """
