@@ -5,9 +5,8 @@ import streamlit as st
 from io import BytesIO
 from ezdxf.enums import TextEntityAlignment
 from mitosheet.streamlit.v1 import spreadsheet
-from pylatex import Document, Section, Command
+from pylatex import Document, Section, Command, Package, Subsection
 from pylatex.utils import NoEscape
-import requests
 # Funções para cálculos elétricos
 def calcular_corrente_nominal(potencia, tensao, fator_potencia, num_fases):
     if num_fases == 1:
@@ -267,7 +266,10 @@ def ler_dados(file_path):
     return data_tables
 
 def formatar_tabela_latex(circuitos, disjuntores_gerais, disjuntor_qgbt):
-    tabela_latex = "\\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|}\n\\hline\n"
+    tabela_latex = "\\begin{landscape} \n"
+    tabela_latex +="\\section{Memória de Cálculo dos Circuitos - Tabelas} \n"
+    tabela_latex +="\\fontsize{5}{5}\selectfont \n"
+    tabela_latex += "\\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|}\n\\hline\n"
     tabela_latex += "Nome do Circuito & Potência (W) & Tensão (V) & FP & Nº de Fases & Temp (°C) & Nº de Circuitos & Comprimento (km) & Condutor(mm²) & Disjuntor(A) & delta (V) & Fases & Quadro \\\\ \\hline\n"
     circuitos_ordenados = sorted(circuitos, key=lambda x: x['nome'])
     for circuito in circuitos_ordenados:
@@ -281,7 +283,8 @@ def formatar_tabela_latex(circuitos, disjuntores_gerais, disjuntor_qgbt):
         tabela_latex += linha_disjuntor
     tabela_latex += "\\hline\n"
     tabela_latex += f"QGBT & {disjuntor_qgbt} \\\\ \\hline\n"
-    tabela_latex += "\\end{tabular}"
+    tabela_latex += "\\end{tabular} \n"
+    tabela_latex += "\\end{landscape}"
     return tabela_latex
 
 def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
@@ -303,7 +306,7 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         valor_queda_tensao = tabela_queda_tensao.loc[tabela_queda_tensao['seção do condutor'] == secao_condutor, 'Queda de tensão (V/A.km)'].iloc[0]
         queda_tensao = valor_queda_tensao * corrente_nominal * comprimento
         n_factor = '0' if num_fases == 1 else '1' if num_fases == 2 else '2'
-        latex_content += f"\\subsection{{Circuito: {nome}}}\n"
+        latex_content += f"\\subsection*{{Circuito: {nome}}}\n"
         latex_content += "\\begin{itemize}\n"
         latex_content += f"    \\item \\textbf{{Dados do Circuito:}} Potência = {potencia}W, Tensão = {tensao}V, Fator de Potência = {fator_potencia}, Número de Fases = {num_fases}.\n"
         latex_content += f"    \\item \\textbf{{Cálculo da Corrente Nominal (Inominal):}} \[ I_{{\\text{{nominal}}}} = \\frac{{{potencia}}}{{\\sqrt{{3}}^{{{n_factor}}} \\times {tensao} \\times {fator_potencia}}} \] = {corrente_nominal} A.\n"
@@ -311,7 +314,7 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         latex_content += f"    \\[ I_{{\\text{{corrigida}}}} = \\frac{{I_{{\\text{{nominal}}}}}}{{\\text{{Fator Temperatura}} \\times \\text{{Fator Agrupamento}}}} = \\frac{{{corrente_nominal}}}{{{fator_correcao_temp} \\times {fator_agrupamento}}} \\] = {corrente_corrigida} A.\n"
         latex_content += "    \\item \\textbf{{Cálculo da Queda de Tensão:}}\n"
         latex_content += "    A queda de tensão é calculada pela fórmula: \n"
-        latex_content += "    \\[ \\Delta V = I_{\\text{nominal}} \\times \\text{Comprimento} \\times \\text{Queda de Tensão (V/A.km)} \\]\n"
+        latex_content += "    \\[ $\\Delta V = I_{\\text{nominal}} \\times \\text{Comprimento} \\times \\text{(V/A.km)}$ \\]\n"
         latex_content += f"    Onde para este circuito, \n"
         latex_content += f"    \\begin{{align*}}\n"
         latex_content += f"    I_{{\\text{{nominal}}}} &= {corrente_nominal} \\text{{ A}}, \\\\\n"
@@ -324,7 +327,74 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
     return latex_content
 
 def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_gerais, disjuntor_qgbt, data_tables):
-    doc = Document()
+    doc = Document(documentclass='article', document_options='11pt')
+    
+    # Adiciona os pacotes necessários
+    doc.packages.append(Package('makeidx'))
+    doc.packages.append(Package('multirow'))
+    doc.packages.append(Package('multicol'))
+    doc.packages.append(Package('xcolor', options='dvipsnames,svgnames,table'))
+    doc.packages.append(Package('graphicx'))
+    doc.packages.append(Package('epstopdf'))
+    doc.packages.append(Package('ulem'))
+    doc.packages.append(Package('hyperref'))
+    doc.packages.append(Package('amsmath'))
+    doc.packages.append(Package('lmodern'))
+    doc.packages.append(Package('amssymb'))
+    doc.packages.append(Package('pdflscape'))
+    doc.packages.append(Package('geometry', options='paperwidth=595pt,paperheight=841pt,top=23pt,right=56pt,bottom=56pt,left=56pt'))
+    
+    # Adiciona o autor e título
+    doc.preamble.append(Command('author', 'CHRISTINE CACERES BURGHART'))
+    doc.preamble.append(Command('title', ''))
+    
+    # Adiciona o novo ambiente de indentação
+    doc.preamble.append(NoEscape(r"""
+    \makeatletter
+    \newenvironment{indentation}[3]%
+    {\par\setlength{\parindent}{#3}
+    \setlength{\leftmargin}{#1}       \setlength{\rightmargin}{#2}%
+    \advance\linewidth -\leftmargin       \advance\linewidth -\rightmargin%
+    \advance\@totalleftmargin\leftmargin  \@setpar{{\@@par}}%
+    \parshape 1\@totalleftmargin \linewidth\ignorespaces}{\par}%
+    \makeatother
+    """))
+    
+    # Adiciona o início do documento
+    doc.append(NoEscape(r'\begin{document}'))
+    doc.append(NoEscape(r'\begin{center}'))
+    doc.append(NoEscape(r'\large \textbf{OBJETO:} Memorial de dimensionamento para os circuitos do NOMEDOPROJETO'))
+    doc.append(NoEscape(r'\end{center}'))
+    
+    # Adiciona seções ao documento
+    with doc.create(Section('Introdução')):
+        doc.append('Este documento descreve o procedimento técnico detalhado para o dimensionamento de condutores e disjuntores em circuitos elétricos residenciais, baseando-se nas normas técnicas ABNT NBR 5410 e ABNT NBR 5471. A metodologia aborda a determinação da seção transversal dos condutores e a escolha de disjuntores, levando em consideração critérios como capacidade de condução de corrente, queda de tensão, e proteção contra sobrecarga e curto-circuito.')
+    
+    with doc.create(Section('Metodologia e Normas Aplicadas')):
+        doc.append('O dimensionamento dos condutores elétricos segue as diretrizes estabelecidas pelas normas ABNT NBR 5410 e ABNT NBR 5471, que definem os padrões para instalações elétricas de baixa tensão e para condutores de energia elétrica, respectivamente.')
+    
+    with doc.create(Section('Cálculos e Resultados')):
+        with doc.create(Subsection('Cálculo da Corrente Nominal do Circuito')):
+            doc.append(NoEscape(r'A corrente nominal (\(I_{\text{nominal}}\)) é calculada pela fórmula:'))
+            doc.append(NoEscape(r'\[ I_{\text{nominal}} = \frac{P}{\sqrt{3} \cdot V \cdot \cos(\phi)} \]'))
+            doc.append(NoEscape(r'para circuitos trifásicos, e'))
+            doc.append(NoEscape(r'\[ I_{\text{nominal}} = \frac{P}{V \cdot \cos(\phi)} \]'))
+            doc.append(NoEscape(r'para circuitos monofásicos, onde \(P\) é a potência, \(V\) a tensão e \(\cos(\phi)\) o fator de potência.'))
+        
+        with doc.create(Subsection('Cálculo da Corrente Corrigida')):
+            doc.append(NoEscape(r'A corrente corrigida (\(I_{\text{corrigida}}\)) considera os fatores de temperatura e agrupamento:'))
+            doc.append(NoEscape(r'\[ I_{\text{corrigida}} = \frac{I_{\text{nominal}}}{\text{Fator\_Temperatura} \times \text{Fator\_Agrupamento}} \]'))
+        
+        with doc.create(Subsection('Seleção do Condutor')):
+            doc.append('A seleção do condutor é realizada garantindo que sua capacidade de corrente seja maior que \( I_{\text{corrigida}} \). A seção mínima é determinada pelo método de instalação e as especificações da norma ABNT NBR 5410.')
+        
+        with doc.create(Subsection('Cálculo da Queda de Tensão')):
+            doc.append('A queda de tensão é calculada considerando a resistência e a reatância do condutor, bem como a distância do circuito:')
+            doc.append(NoEscape(r'\[ \Delta V =  {I_{\text{nominal}} \times \text{comprimento} \times \text{V/A.km} \]'))
+        
+        with doc.create(Subsection('Escolha do Disjuntor')):
+            doc.append(NoEscape(r'O disjuntor é selecionado assegurando que \( I_{\text{corrigida}} < \) I_{\text{disjuntor}} \( < \) Capacidade de corrente do condutor.'))
+
     tabela_latex = formatar_tabela_latex(circuitos, disjuntores_gerais, disjuntor_qgbt)
     doc.append(NoEscape(tabela_latex))
     memcal = memcalc(circuitos, resultados, data_tables['queda de tensão'])
