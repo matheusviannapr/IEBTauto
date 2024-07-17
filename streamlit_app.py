@@ -687,19 +687,19 @@ if uploaded_file_dados and uploaded_file_circuitos:
             st.download_button(label="Baixar Resultados", data=output, file_name='resultados_circuitos.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             st.subheader('Tabela de Materiais')
             df_selecionado = resultados_circuitos[['Nome do Circuito', 'Seção do Condutor (mm²)', 'Disjuntor','Comprimento','Número de fases']]
-            df_selecionado['Quantidade de condutor fase'] = df_selecionado['Comprimento'] * df_selecionado['Número de fases']
+            df_selecionado['Quantidade de condutor fase'] = df_selecionado['Comprimento'] * df_selecionado['Número de fases']*1000
             # Adicionar coluna para "Seção do Condutor Neutro" com regra de s <= 25
             df_selecionado['Seção do Condutor Neutro (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 25 else seção_neutro_map.get(x, x)
             )
             # Adicionar coluna para "comprimento neutro"
-            df_selecionado['Comprimento neutro'] = df_selecionado['Comprimento']
+            df_selecionado['Comprimento neutro'] = df_selecionado['Comprimento']*1000
             # Adicionar coluna para "Seção do Condutor de Terra" com regra de s <= 16
             df_selecionado['Seção do Condutor de Terra (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 16 else seção_terra_map.get(x, x)
             )
             # Adicionar coluna para "comprimento terra"
-            df_selecionado['Comprimento terra'] = df_selecionado['Comprimento']
+            df_selecionado['Comprimento terra'] = df_selecionado['Comprimento']*1000
             st.write(df_selecionado)
             output_path = gerar_diagrama_unifilar(exemplos_circuitos)
             st.success(f"Diagrama salvo em {output_path}")
