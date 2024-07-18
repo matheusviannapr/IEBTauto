@@ -765,13 +765,13 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
                     """
                 Para atualizar os parâmetros dos blocos no seu unifilar utilizando o AutoCAD, siga estas instruções:
 
-                1.Abra o arquivo do unifilar no AutoCAD.
+                1. Abra o arquivo do unifilar no AutoCAD.
 
-                2.Digite o comando 'battman' na linha de comando do AutoCAD e pressione Enter.
+                2. Digite o comando 'battman' na linha de comando do AutoCAD e pressione Enter.
 
-                3.A janela "Block Attribute Manager" será aberta. Nela, você deverá atualizar todos os blocos para que o atributo apareça no local correto.
+                3. A janela "Block Attribute Manager" será aberta. Nela, você deverá atualizar todos os blocos para que o atributo apareça no local correto.
 
-                4.Faça as alterações desejadas e clique em "OK" para aplicar as mudanças.
+                4. Faça as alterações desejadas e clique em "OK" para aplicar as mudanças.
 
                 """
                 ))
@@ -780,15 +780,15 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
                     """
                     Trata-se de um código em Latex, portanto é necesária sua compilação. Se você não possui um compilador, sugiro a plataforma OverLeaf.
 
-                    1.Acesse o site do Overleaf (https://www.overleaf.com/).
+                    1. Acesse o site do Overleaf (https://www.overleaf.com/).
 
-                    2.Faça login ou crie uma conta, se ainda não tiver uma.
+                    2. Faça login ou crie uma conta, se ainda não tiver uma.
 
-                    3.Após o login, clique em "New Project" e selecione "Upload Project".
+                    3. Após o login, clique em "New Project" e selecione "Upload Project".
 
-                    4.Selecione o arquivo do memorial de cálculo em LaTeX que você deseja abrir e faça o upload.
+                    4. Selecione o arquivo do memorial de cálculo em LaTeX que você deseja abrir e faça o upload.
 
-                    5.Após o upload, o projeto será aberto no editor do Overleaf, onde você poderá visualizar e editar o documento em LaTeX.
+                    5. Após o upload, o projeto será aberto no editor do Overleaf, onde você poderá visualizar e editar o documento em LaTeX.
                 """
                 ))
             
