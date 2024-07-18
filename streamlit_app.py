@@ -665,11 +665,10 @@ tipo_alimentacao = st.selectbox(
 if tipo_alimentacao == "Trifásica":
     fases_QD = 3
     # Adicione sua lógica para trifásico aqui
-elif tipo_alimentacao == "Monofásica":
-    fases_QD = 1
-    # Adicione sua lógica para monofásico aqui
 elif tipo_alimentacao == "Bifásica":
     fases_QD = 2
+elif tipo_alimentacao == "Monofásica":
+    fases_QD = 1
 st.sidebar.header("Sobre o Autor")
 st.sidebar.markdown("""
 Este aplicativo foi desenvolvido por [Matheus Vianna](https://matheusvianna.com). Engenheiro Eletricista com especialização em Ciência de Dados. Confira meu site clicando no meu nome!
