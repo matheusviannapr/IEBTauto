@@ -670,7 +670,6 @@ elif tipo_alimentacao == "Monofásica":
     # Adicione sua lógica para monofásico aqui
 elif tipo_alimentacao == "Bifásica":
     fases_QD = 2
-
 st.sidebar.header("Sobre o Autor")
 st.sidebar.markdown("""
 Este aplicativo foi desenvolvido por [Matheus Vianna](https://matheusvianna.com). Engenheiro Eletricista com especialização em Ciência de Dados. Confira meu site clicando no meu nome!
@@ -752,12 +751,46 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             st.write(df_selecionado)
             output_path = gerar_diagrama_unifilar(exemplos_circuitos)
             st.success(f"Diagrama salvo em {output_path}")
-            st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
+            col1, col2 = st.columns(2)
+            with col1:
+                st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
             caminho_arquivo = 'memcalc'  # Caminho completo do arquivo latex ser gerado
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
             criar_relatorio_latex(exemplos_circuitos, resultados_circuitos, caminho_arquivo,disjuntoresgerais,disjQGBT,data_tables)
-            st.download_button(label="Baixar Memorial Descritivo", data=open('memcalc.tex', "rb").read(), file_name='memcalc.tex')
+            with col2:
+                st.download_button(label="Baixar Memorial de Cálculo", data=open('memcalc.tex', "rb").read(), file_name='memcalc.tex')
+            with st.expander(("Como abrir o Diagrama Unifilar")):
+                st.markdown((
+                    """
+                Para atualizar os parâmetros dos blocos no seu unifilar utilizando o AutoCAD, siga estas instruções:
+
+                1.Abra o arquivo do unifilar no AutoCAD.
+
+                2.Digite o comando 'battman' na linha de comando do AutoCAD e pressione Enter.
+
+                3.A janela "Block Attribute Manager" será aberta. Nela, você deverá atualizar todos os blocos para que o atributo apareça no local correto.
+
+                4.Faça as alterações desejadas e clique em "OK" para aplicar as mudanças.
+
+                """
+                ))
+            with st.expander(("Como abrir o Memorial de Cálculo")):
+                st.markdown((
+                    """
+                    Trata-se de um código em Latex, portanto é necesária sua compilação. Se você não possui um compilador, sugiro a plataforma OverLeaf.
+
+                    1.Acesse o site do Overleaf (https://www.overleaf.com/).
+
+                    2.Faça login ou crie uma conta, se ainda não tiver uma.
+
+                    3.Após o login, clique em "New Project" e selecione "Upload Project".
+
+                    4.Selecione o arquivo do memorial de cálculo em LaTeX que você deseja abrir e faça o upload.
+
+                    5.Após o upload, o projeto será aberto no editor do Overleaf, onde você poderá visualizar e editar o documento em LaTeX.
+                """
+                ))
             
 else:
     st.warning('Por favor, faça o upload dos arquivos necessários para calcular os parâmetros dos circuitos.')
