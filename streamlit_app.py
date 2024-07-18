@@ -657,8 +657,8 @@ uploaded_file_circuitos = st.data_editor(sample_data, column_config=config, num_
 
 print(uploaded_file_circuitos)
 
-st.sidebar.header("Configuração de Alimentação")
-tipo_alimentacao = st.sidebar.selectbox(
+st.subheader("Configuração de Alimentação")
+tipo_alimentacao = st.selectbox(
     "Selecione o tipo de alimentação geral:",
     ("Trifásica", "Monofásica", "Bifásica")
 )
