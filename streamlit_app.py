@@ -4,7 +4,6 @@ import ezdxf
 import streamlit as st
 from io import BytesIO
 from ezdxf.enums import TextEntityAlignment
-from mitosheet.streamlit.v1 import spreadsheet
 from pylatex import Document, Section, Command, Package, Subsection
 from pylatex.utils import NoEscape
 import requests
@@ -555,20 +554,44 @@ def reordenar_colunas(df):
     return df.reindex(columns=ordem_colunas)
 
 
-sample_data = {
-    "nome": ["Circuito 1", "Circuito 2", "Circuito 3"],
-    "potencia": [1000, 1500, 2000],
-    "tensao": [220, 127, 220],
-    "fator_potencia": [0.95, 0.9, 0.85],
-    "num_fases": [1, 1, 1],
-    "temperatura": [30, 35, 25],
-    "num_circuitos": [2, 3, 1],
-    "comprimento": [0.1, 0.2, 0.15],
-    "met_instala": ["3 condutores carregados – método B1 ( Amperes)", "3 condutores carregados – método B1 ( Amperes)", "3 condutores carregados – método B1 ( Amperes)"],
-    "Quadro": ["Q1", "Q1", "Q1"]
-}
-
-example_template = pd.DataFrame(sample_data)
+sample_data = [
+    {
+        "nome": "Circuito 1",
+        "potencia": 1000,
+        "tensao": 220,
+        "fator_potencia": 0.95,
+        "num_fases": 1,
+        "temperatura": 30,
+        "num_circuitos": 2,
+        "comprimento": 0.1,
+        "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "Quadro": "Q1"
+    },
+    {
+        "nome": "Circuito 2",
+        "potencia": 1500,
+        "tensao": 127,
+        "fator_potencia": 0.9,
+        "num_fases": 1,
+        "temperatura": 35,
+        "num_circuitos": 3,
+        "comprimento": 0.2,
+        "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "Quadro": "Q1"
+    },
+    {
+        "nome": "Circuito 3",
+        "potencia": 2000,
+        "tensao": 220,
+        "fator_potencia": 0.85,
+        "num_fases": 1,
+        "temperatura": 25,
+        "num_circuitos": 1,
+        "comprimento": 0.15,
+        "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "Quadro": "Q1"
+    }
+]
 
 # Interface do Streamlit
 st.title('Calculadora de circuitos Elétricos de Baixa Tensão - NBR 5410')
@@ -596,22 +619,44 @@ with st.expander(("Sobre a Calculadora")):
 
 st.header('Etapa Inicial')
 st.markdown("""
-Aqui está um exemplo de planilha que você deve usar como modelo. Faça o download e edite conforme suas necessidades. 
+Preencha a planilha de Circuitos. Você pode copiar e colar os dados diretamente de uma planilha Excel, se preferir. 
 """)
 file_path = 'sample_circuitos.xls'
 
 # Provide download link for the existing Excel file
-with open(file_path, 'rb') as file:
-    st.download_button(
-        label="Baixar Modelo Excel",
-        data=file,
-        file_name='sample_circuitos.xls',
-        mime='application/vnd.ms-excel'
-    )
-st.warning('Não mudar o nome das colunas na planilha modelo')
 data_sheets = pd.read_excel('Dados para o gpt.xls', sheet_name=None)
 uploaded_file_dados = {sheet_name: data_sheets[sheet_name] for sheet_name in data_sheets}
-uploaded_file_circuitos = st.file_uploader("Escolha o arquivo de circuitos para realizar o dimensionamento", type=["xls", "xlsx"])
+
+methods = [
+    "2 condutores carregados – método B1 ( Amperes)",
+    "3 condutores carregados – método B1 ( Amperes)",
+    "2 condutores carregados – método B2 ( Amperes)",
+    "3 condutores carregados – método B2 ( Amperes)",
+    "2 condutores carregados – método C ( Amperes)",
+    "3 condutores carregados – método C (Amperes)"
+]
+temp = [10, 15, 20, 25, 35, 40, 45]
+config = {
+    "nome": st.column_config.TextColumn("Nome do Circuito", width="large", required=True),
+    "potencia": st.column_config.NumberColumn("Potência Nominal"),
+    "tensao": st.column_config.NumberColumn("Tensão Nominal"),
+    "fator_potencia": st.column_config.NumberColumn("Fator de Potência"),
+    "num_fases": st.column_config.NumberColumn("Número de Fases"),
+    "temperatura": st.column_config.SelectboxColumn("Temperatura", options=temp),
+    "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
+    "comprimento": st.column_config.NumberColumn("Comprimento (km)"),
+    "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
+    "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
+}
+
+
+
+uploaded_file_circuitos = st.data_editor(sample_data, column_config=config, num_rows="dynamic")
+
+# Aplicar renomeação
+
+print(uploaded_file_circuitos)
+
 st.sidebar.header("Configuração de Alimentação")
 tipo_alimentacao = st.sidebar.selectbox(
     "Selecione o tipo de alimentação geral:",
@@ -667,14 +712,13 @@ seção_terra_map = {
     300: 150
     }
     
-if uploaded_file_dados and uploaded_file_circuitos:
+if uploaded_file_dados and st.button('Calcular Parâmetros'):
     data_tables = uploaded_file_dados
     if data_tables is not None:
-        exemplos_circuitos = ler_circuitos_de_excel(uploaded_file_circuitos)
+        exemplos_circuitos = uploaded_file_circuitos
         #exemplos_circuitos = reordenar_colunas(exemplos_circuitos)
-        spreadsheet(exemplos_circuitos)
 
-        if exemplos_circuitos is not None and st.button('Calcular Parâmetros'):
+        if exemplos_circuitos is not None:
             exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
             for circuito in exemplos_circuitos:
                 circuito['queda_tensao_max_admitida'] = 0.05 * circuito['tensao']
@@ -692,8 +736,13 @@ if uploaded_file_dados and uploaded_file_circuitos:
             df_selecionado['Seção do Condutor Neutro (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 25 else seção_neutro_map.get(x, x)
             )
+
             # Adicionar coluna para "comprimento neutro"
-            df_selecionado['Comprimento neutro'] = df_selecionado['Comprimento']*1000
+            df_selecionado['Comprimento neutro'] = df_selecionado.apply(
+                lambda row: row['Comprimento'] * 1000 if row['Número de fases'] == 1 else 0,
+                axis=1
+            )
+
             # Adicionar coluna para "Seção do Condutor de Terra" com regra de s <= 16
             df_selecionado['Seção do Condutor de Terra (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 16 else seção_terra_map.get(x, x)
