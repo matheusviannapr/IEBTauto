@@ -637,7 +637,7 @@ methods = [
 ]
 temp = [10, 15, 20, 25, 35, 40, 45]
 config = {
-    "nome": st.column_config.TextColumn("Nome do Circuito", width="large", required=True),
+    "nome": st.column_config.TextColumn("Nome do Circuito", required=True),
     "potencia": st.column_config.NumberColumn("Potência Nominal"),
     "tensao": st.column_config.NumberColumn("Tensão Nominal"),
     "fator_potencia": st.column_config.NumberColumn("Fator de Potência"),
