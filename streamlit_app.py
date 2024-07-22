@@ -510,10 +510,10 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais):
 
             if index == circuito_central_index:
                 entrada_tri_attributes = {
-                    'corrente': str(disjuntores_gerais[nome_quadro])
+                    'CORRENTE': str(disjuntores_gerais[nome_quadro])
                 }
                 insert_point_entrada_tri = (x_offset, y_offset)
-                insert_dxf_block_with_attributes(msp, 'entrada_tri.dxf', 'entrada_tri', insert_point_entrada_tri, entrada_tri_attributes)
+                insert_dxf_block_with_attributes(msp, 'entrada_tri.dxf', 'entrada', insert_point_entrada_tri, entrada_tri_attributes)
 
 
 
@@ -764,7 +764,7 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
 
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
-            output_path = gerar_diagrama_unifilar(exemplos_circuitos)
+            output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais)
             st.success(f"Diagrama salvo em {output_path}")
             col1, col2 = st.columns(2)
             with col1:
