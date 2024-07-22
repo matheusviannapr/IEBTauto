@@ -450,7 +450,7 @@ def ordenar_por_nome(df):
 
 doc = ezdxf.new(dxfversion='R2010')
 msp = doc.modelspace()
-def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais):
+def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
     # Agrupa os circuitos pelo quadro
     if not isinstance(exemplos_circuitos, pd.DataFrame):
         exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
@@ -509,11 +509,18 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais):
             insert_dxf_block_with_attributes(msp, fios_filename, fios_block_name, insert_point_fios, fios_attributes)
 
             if index == circuito_central_index:
-                entrada_tri_attributes = {
+                if fases_Q == 3:
+                 entrada_tri_attributes = {
                     'CORRENTE': str(disjuntores_gerais[nome_quadro])
-                }
-                insert_point_entrada_tri = (x_offset, y_offset+30)
-                insert_dxf_block_with_attributes(msp, 'entrada_tri.dxf', 'entrada', insert_point_entrada_tri, entrada_tri_attributes)
+                    }
+                 insert_point_entrada_tri = (x_offset, y_offset + 30)
+                 insert_dxf_block_with_attributes(msp, 'entrada_tri.dxf', 'entrada', insert_point_entrada_tri, entrada_tri_attributes)
+                elif fases_Q == 2:
+                 fios_bi_attributes = {
+                    'CORRENTE': str(disjuntores_gerais[nome_quadro])
+                 }
+                 insert_point_fios_bi = (x_offset, y_offset + 30)
+                 insert_dxf_block_with_attributes(msp, 'entrada_bi.dxf', 'entrada', insert_point_fios_bi, fios_bi_attributes)
 
 
 
@@ -764,7 +771,7 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
 
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
-            output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais)
+            output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
             st.success(f"Diagrama salvo em {output_path}")
             col1, col2 = st.columns(2)
             with col1:
