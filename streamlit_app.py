@@ -512,7 +512,7 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais):
                 entrada_tri_attributes = {
                     'CORRENTE': str(disjuntores_gerais[nome_quadro])
                 }
-                insert_point_entrada_tri = (x_offset, y_offset)
+                insert_point_entrada_tri = (x_offset, y_offset-30)
                 insert_dxf_block_with_attributes(msp, 'entrada_tri.dxf', 'entrada', insert_point_entrada_tri, entrada_tri_attributes)
 
 
