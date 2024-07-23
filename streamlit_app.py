@@ -450,7 +450,7 @@ def ordenar_por_nome(df):
 
 doc = ezdxf.new(dxfversion='R2010')
 msp = doc.modelspace()
-def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
+def gerar_diagrama_unifilar(exemplos_circuitos):
     # Agrupa os circuitos pelo quadro
     if not isinstance(exemplos_circuitos, pd.DataFrame):
         exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
@@ -478,8 +478,6 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
         quadro_min_y = float('inf')
         quadro_max_x = float('-inf')
         quadro_max_y = float('-inf')
-        num_circuitos = len(df_ordenado_unifilar)
-        circuito_central_index = num_circuitos // 2
         for index, row in df_ordenado_unifilar.iterrows():
             if row['num_fases'] == 1:
                 disjuntor_filename = 'Disjuntor_mono.dxf'
@@ -507,23 +505,6 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
             insert_dxf_block_with_attributes(msp, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes)
             insert_point_fios = (x_offset + 70, y_offset + 30)
             insert_dxf_block_with_attributes(msp, fios_filename, fios_block_name, insert_point_fios, fios_attributes)
-
-            if index == circuito_central_index:
-                if fases_Q == 3:
-                 entrada_tri_attributes = {
-                    'CORRENTE': str(disjuntores_gerais[nome_quadro])
-                    }
-                 insert_point_entrada_tri = (x_offset, y_offset + 30)
-                 insert_dxf_block_with_attributes(msp, 'entrada_tri.dxf', 'entrada', insert_point_entrada_tri, entrada_tri_attributes)
-                elif fases_Q == 2:
-                 fios_bi_attributes = {
-                    'CORRENTE': str(disjuntores_gerais[nome_quadro])
-                 }
-                 insert_point_fios_bi = (x_offset, y_offset + 30)
-                 insert_dxf_block_with_attributes(msp, 'entrada_bi.dxf', 'entrada', insert_point_fios_bi, fios_bi_attributes)
-
-
-
             y_offset -= 30
             
 
@@ -579,7 +560,7 @@ sample_data = [
         "potencia": 1000,
         "tensao": 220,
         "fator_potencia": 0.95,
-        "num_fases": 1,
+        "num_fases1": "F+N",
         "temperatura": 30,
         "num_circuitos": 2,
         "comprimento": 0.1,
@@ -591,7 +572,7 @@ sample_data = [
         "potencia": 1500,
         "tensao": 127,
         "fator_potencia": 0.9,
-        "num_fases": 1,
+        "num_fases1": "F+F+T",
         "temperatura": 35,
         "num_circuitos": 3,
         "comprimento": 0.2,
@@ -603,7 +584,7 @@ sample_data = [
         "potencia": 2000,
         "tensao": 220,
         "fator_potencia": 0.85,
-        "num_fases": 1,
+        "num_fases1": "F+N+T",
         "temperatura": 25,
         "num_circuitos": 1,
         "comprimento": 0.15,
@@ -654,13 +635,19 @@ methods = [
     "2 condutores carregados – método C ( Amperes)",
     "3 condutores carregados – método C (Amperes)"
 ]
+faseslabel = [
+    "F+N",
+    "F+N+T",
+    "F+F+T",
+    "F+F+F+T"
+]
 temp = [10, 15, 20, 25, 35, 40, 45]
 config = {
-    "nome": st.column_config.TextColumn("Nome do Circuito", width="large", required=True),
+    "nome": st.column_config.TextColumn("Nome do Circuito", required=True),
     "potencia": st.column_config.NumberColumn("Potência Nominal"),
     "tensao": st.column_config.NumberColumn("Tensão Nominal"),
     "fator_potencia": st.column_config.NumberColumn("Fator de Potência"),
-    "num_fases": st.column_config.NumberColumn("Número de Fases"),
+    "num_fases1": st.column_config.SelectboxColumn("Número de Fases",options=faseslabel),
     "temperatura": st.column_config.SelectboxColumn("Temperatura", options=temp),
     "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
     "comprimento": st.column_config.NumberColumn("Comprimento (km)"),
@@ -669,8 +656,23 @@ config = {
 }
 
 
-
 uploaded_file_circuitos = st.data_editor(sample_data, column_config=config, num_rows="dynamic")
+
+
+print("Tipo do objeto:", type(uploaded_file_circuitos))
+
+
+
+# Iterando sobre cada valor na coluna 'num_fases1' para determinar o valor de 'num_fases'
+for ckt in uploaded_file_circuitos:
+    if ckt['num_fases1'] in ["F+N", "F+N+T"]:
+        ckt['num_fases']=1
+    elif ckt['num_fases1']  == "F+F+T":
+        ckt['num_fases']=2
+    elif ckt['num_fases1']  == "F+F+F+T":
+        ckt['num_fases']=3
+
+
 
 # Aplicar renomeação
 
@@ -684,11 +686,10 @@ tipo_alimentacao = st.selectbox(
 if tipo_alimentacao == "Trifásica":
     fases_QD = 3
     # Adicione sua lógica para trifásico aqui
-elif tipo_alimentacao == "Monofásica":
-    fases_QD = 1
-    # Adicione sua lógica para monofásico aqui
 elif tipo_alimentacao == "Bifásica":
     fases_QD = 2
+elif tipo_alimentacao == "Monofásica":
+    fases_QD = 1
 st.sidebar.header("Sobre o Autor")
 st.sidebar.markdown("""
 Este aplicativo foi desenvolvido por [Matheus Vianna](https://matheusvianna.com). Engenheiro Eletricista com especialização em Ciência de Dados. Confira meu site clicando no meu nome!
@@ -768,15 +769,14 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             # Adicionar coluna para "comprimento terra"
             df_selecionado['Comprimento terra'] = df_selecionado['Comprimento']*1000
             st.write(df_selecionado)
-            disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
-
-            disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
-            output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
+            output_path = gerar_diagrama_unifilar(exemplos_circuitos)
             st.success(f"Diagrama salvo em {output_path}")
             col1, col2 = st.columns(2)
             with col1:
                 st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
             caminho_arquivo = 'memcalc'  # Caminho completo do arquivo latex ser gerado
+            disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
+            disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
             criar_relatorio_latex(exemplos_circuitos, resultados_circuitos, caminho_arquivo,disjuntoresgerais,disjQGBT,data_tables)
             with col2:
                 st.download_button(label="Baixar Memorial de Cálculo", data=open('memcalc.tex', "rb").read(), file_name='memcalc.tex')
@@ -785,13 +785,13 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
                     """
                 Para atualizar os parâmetros dos blocos no seu unifilar utilizando o AutoCAD, siga estas instruções:
 
-                1.Abra o arquivo do unifilar no AutoCAD.
+                1. Abra o arquivo do unifilar no AutoCAD.
 
-                2.Digite o comando 'battman' na linha de comando do AutoCAD e pressione Enter.
+                2. Digite o comando 'battman' na linha de comando do AutoCAD e pressione Enter.
 
-                3.A janela "Block Attribute Manager" será aberta. Nela, você deverá atualizar todos os blocos para que o atributo apareça no local correto.
+                3. A janela "Block Attribute Manager" será aberta. Nela, você deverá atualizar todos os blocos para que o atributo apareça no local correto.
 
-                4.Faça as alterações desejadas e clique em "OK" para aplicar as mudanças.
+                4. Faça as alterações desejadas e clique em "OK" para aplicar as mudanças.
 
                 """
                 ))
@@ -800,15 +800,15 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
                     """
                     Trata-se de um código em Latex, portanto é necesária sua compilação. Se você não possui um compilador, sugiro a plataforma OverLeaf.
 
-                    1.Acesse o site do Overleaf (https://www.overleaf.com/).
+                    1. Acesse o site do Overleaf (https://www.overleaf.com/).
 
-                    2.Faça login ou crie uma conta, se ainda não tiver uma.
+                    2. Faça login ou crie uma conta, se ainda não tiver uma.
 
-                    3.Após o login, clique em "New Project" e selecione "Upload Project".
+                    3. Após o login, clique em "New Project" e selecione "Upload Project".
 
-                    4.Selecione o arquivo do memorial de cálculo em LaTeX que você deseja abrir e faça o upload.
+                    4. Selecione o arquivo do memorial de cálculo em LaTeX que você deseja abrir e faça o upload.
 
-                    5.Após o upload, o projeto será aberto no editor do Overleaf, onde você poderá visualizar e editar o documento em LaTeX.
+                    5. Após o upload, o projeto será aberto no editor do Overleaf, onde você poderá visualizar e editar o documento em LaTeX.
                 """
                 ))
             
