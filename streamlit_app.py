@@ -105,6 +105,7 @@ def calcular_parametros_circuitos(lista_circuitos, data_tables):
         fator_correcao_temp = encontrar_fator_correcao(circuito['temperatura'], data_tables['Fator de correção de temperatur'])
         fator_agrupamento = encontrar_fator_agrupamento(circuito['num_circuitos'], data_tables['Fator de agrupamento'])
         corrente_corrigida = corrente_nominal / (fator_correcao_temp * fator_agrupamento)
+        installmet=circuito['num_fases1']
 
         secao_inicial = determinar_secao_condutor(corrente_corrigida, data_tables['Capacidade de corrente'], circuito['met_instala'])
         secao_final, queda_tensao_final = ajustar_condutor_queda_tensao(corrente_nominal, circuito['comprimento'], secao_inicial, circuito['queda_tensao_max_admitida'], data_tables['Capacidade de corrente'], data_tables['queda de tensão'])
@@ -120,7 +121,8 @@ def calcular_parametros_circuitos(lista_circuitos, data_tables):
             "Fator correção temperatura": fator_correcao_temp,
             "Fator Agrupamento": fator_agrupamento,
             "Número de fases" : circuito['num_fases'],
-            "Comprimento": circuito['comprimento']
+            "Comprimento": circuito['comprimento'], 
+            "Tipo de alimentação": installmet
 
         })
 
@@ -730,7 +732,69 @@ seção_terra_map = {
     240: 120,
     300: 150
     }
+
+condutores_mapping = {
+    '2.5': 91926,
+    '4.0': 91928,
+    '6.0': 91930,
+    '10.0': 91932,
+    '16.0': 91934,
+    '10.0': 92979,
+    '16.0': 92981,
+    '25.0': 92984,
+    '35.0': 92986,
+    '50.0': 92988,
+    '70.0': 92990,
+    '95.0': 92992,
+    '120.0': 92994,
+    '150.0': 92996,
+    '185.0': 92998,
+    '240.0': 93000,
+    '300.0': 93002
+}
+
+disjuntores_mapping = {
+    1: {  # Monopolar
+        '6A': 93653, '10A': 93653, '16A': 93654, '20A': 93655, '25A': 93656, '32A': 93657, '40A': 93658, '50A': 93659
+    },
+    2: {  # Bipolar
+        '10A': 93660, '16A': 93661, '20A': 93662, '25A': 93663, '32A': 93664, '40A': 93665, '50A': 93666
+    },
+    3: {  # Tripolar
+        '10A': 93667, '16A': 93668, '20A': 93669, '25A': 93670, '32A': 93671, '40A': 93672, '50A': 93673
+    }
+}
+sinapi_df = pd.read_excel('sinapi.xls', sheet_name='Planilha1')
+def get_disjuntor_sinapi(row):
+    fases = row['Número de fases']
+    disjuntor = f"{row['Disjuntor']}A"
+    return disjuntores_mapping.get(fases, {}).get(disjuntor)
+def calcular_custo_total(df, sinapi_df1):
+    # Criar um dicionário para mapeamento
+    custo_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['CUSTO TOTAL'].to_dict()
+    nome_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['DESCRICAO DA COMPOSICAO'].to_dict()
+    df['Descrição da Composição']=df['Codigo'].map(nome_dict)
+    # Mapear os custos totais para cada código no DataFrame df_agrupado
+    df['Custo Unitário'] = df['Codigo'].map(custo_dict)
+
+    # Multiplicar a quantidade pelo custo total para obter o custo total final
+    df['Custo Total'] = df['Quantidade'] * df['Custo Unitário']
+    return df
+
+def calcular_custo_totaldisj(df, sinapi_df1):
+    # Criar um dicionário para mapeamento
+    custo_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['CUSTO TOTAL'].to_dict()
+    nome_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['DESCRICAO DA COMPOSICAO'].to_dict()
+    df_agrupado = df['Codigo'].value_counts().reset_index()
+    df_agrupado.columns = ['Codigo', 'Quantidade']
+    # Mapear os custos totais e descrições para cada código no DataFrame df
+    df_agrupado['Descrição da Composição'] = df_agrupado['Codigo'].map(nome_dict)
+    df_agrupado['Custo Unitário'] = df_agrupado['Codigo'].map(custo_dict)
+    # Agrupar por código e calcular a quantidade total e custo total
+    df_agrupado['Custo Total'] = df_agrupado['Quantidade'] * df_agrupado['Custo Unitário']
     
+    return df_agrupado
+
 if uploaded_file_dados and st.button('Calcular Parâmetros'):
     data_tables = uploaded_file_dados
     if data_tables is not None:
@@ -749,26 +813,58 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             output.seek(0)
             st.download_button(label="Baixar Resultados", data=output, file_name='resultados_circuitos.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             st.subheader('Tabela de Materiais')
-            df_selecionado = resultados_circuitos[['Nome do Circuito', 'Seção do Condutor (mm²)', 'Disjuntor','Comprimento','Número de fases']]
+            df_selecionado = resultados_circuitos[['Nome do Circuito', 'Seção do Condutor (mm²)', 'Disjuntor','Comprimento','Número de fases','Tipo de alimentação']]
             df_selecionado['Quantidade de condutor fase'] = df_selecionado['Comprimento'] * df_selecionado['Número de fases']*1000
             # Adicionar coluna para "Seção do Condutor Neutro" com regra de s <= 25
             df_selecionado['Seção do Condutor Neutro (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 25 else seção_neutro_map.get(x, x)
             )
-
             # Adicionar coluna para "comprimento neutro"
             df_selecionado['Comprimento neutro'] = df_selecionado.apply(
                 lambda row: row['Comprimento'] * 1000 if row['Número de fases'] == 1 else 0,
                 axis=1
             )
-
             # Adicionar coluna para "Seção do Condutor de Terra" com regra de s <= 16
             df_selecionado['Seção do Condutor de Terra (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 16 else seção_terra_map.get(x, x)
             )
             # Adicionar coluna para "comprimento terra"
-            df_selecionado['Comprimento terra'] = df_selecionado['Comprimento']*1000
+            df_selecionado['Comprimento terra'] = df_selecionado.apply(
+                lambda row: row['Comprimento'] * 1000 if row['Tipo de alimentação'] != "F+N" else 0,
+                axis=1
+            )
+            #st.write(onsolidado_df)
+            df_selecionado['Codigo SINAPI Condutor Fase'] = df_selecionado['Seção do Condutor (mm²)'].astype(str).map(condutores_mapping)
+            df_selecionado['Codigo SINAPI Condutor Neutro'] = df_selecionado['Seção do Condutor Neutro (mm²)'].astype(str).map(condutores_mapping)
+            df_selecionado['Codigo SINAPI Condutor de Terra'] = df_selecionado['Seção do Condutor de Terra (mm²)'].astype(str).map(condutores_mapping)
+            df_selecionado['Codigo SINAPI Disjuntor'] = df_selecionado.apply(get_disjuntor_sinapi, axis=1)
+            print(sinapi_df)
+            df_fase = df_selecionado[['Codigo SINAPI Condutor Fase', 'Quantidade de condutor fase']].dropna().rename(
+                columns={'Codigo SINAPI Condutor Fase': 'Codigo', 'Quantidade de condutor fase': 'Quantidade'}
+            )
+            df_neutro = df_selecionado[['Codigo SINAPI Condutor Neutro', 'Comprimento neutro']].dropna().rename(
+                columns={'Codigo SINAPI Condutor Neutro': 'Codigo', 'Comprimento neutro': 'Quantidade'}
+            )
+            df_terra = df_selecionado[['Codigo SINAPI Condutor de Terra', 'Comprimento terra']].dropna().rename(
+                columns={'Codigo SINAPI Condutor de Terra': 'Codigo', 'Comprimento terra': 'Quantidade'}
+            )
+            
+            # Concatenar os DataFrames
+            df_conductors = pd.concat([df_fase, df_neutro, df_terra])
+            # Somar as quantidades por código
+            df_conductors = df_conductors.groupby('Codigo', as_index=False).sum()
+            print(df_conductors)
+            
+            custos_df=calcular_custo_total(df_conductors,sinapi_df)
+            df_disjuntoresaux = df_selecionado.apply(get_disjuntor_sinapi, axis=1)
+            df_disjuntores = df_disjuntoresaux.to_frame(name='Codigo')
+            custos_disj=calcular_custo_totaldisj(df_disjuntores,sinapi_df)
+            print(custos_disj)
+            df_custosconcat = pd.concat([custos_df, custos_disj], axis=0, ignore_index=True)
+            print(custos_df)
             st.write(df_selecionado)
+            st.write(df_custosconcat)
+
             output_path = gerar_diagrama_unifilar(exemplos_circuitos)
             st.success(f"Diagrama salvo em {output_path}")
             col1, col2 = st.columns(2)
