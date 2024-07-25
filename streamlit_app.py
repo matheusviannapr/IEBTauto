@@ -472,7 +472,8 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
             'potencia': [f"{circuito['potencia']} W" for circuito in df_quadro.to_dict('records')],
             'Seção do Condutor (mm²)': [f"{circuito['Seção do Condutor (mm²)']} mm2" for circuito in df_quadro.to_dict('records')],
             'Disjuntor (Ampere)': [f"{circuito['Disjuntor (Ampere)']} A" for circuito in df_quadro.to_dict('records')],
-            'Fases': [circuito['Fases'] for circuito in df_quadro.to_dict('records')]
+            'Fases': [circuito['Fases'] for circuito in df_quadro.to_dict('records')],
+            'num_fases1': [circuito['num_fases1'] for circuito in df_quadro.to_dict('records')]
         })
         df_ordenado_unifilar = ordenar_por_nome(df_unifilar)
 
@@ -483,16 +484,16 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
         num_circuitos = len(df_ordenado_unifilar)
         circuito_central_index = num_circuitos // 2
         for index, row in df_ordenado_unifilar.iterrows():
-            if row['num_fases'] == 1:
+            if row['num_fases'] == 1 and row['num_fases1'] == "F+N+T":
                 disjuntor_filename = 'Disjuntor_mono.dxf'
                 disjuntor_block_name = 'Disjuntor_Mono'
                 fios_filename = 'fios_mono.dxf'
                 fios_block_name = 'Fios_Mono'
-            elif row['num_fases'] == 2:
-                disjuntor_filename = 'Disjuntor_bi.dxf'
-                disjuntor_block_name = 'Disjuntor_Bi'
-                fios_filename = 'fios_bi.dxf'
-                fios_block_name = 'Fios_Bi'
+            elif row['num_fases'] == 1 and row['num_fases1'] == "F+N":
+                disjuntor_filename = 'Disjuntor_mono.dxf'
+                disjuntor_block_name = 'Disjuntor_Mono'
+                fios_filename = 'fios_mono2.dxf'
+                fios_block_name = 'Fios_Mono2'
             elif row['num_fases'] == 3:
                 disjuntor_filename = 'Disjuntor_tri.dxf'
                 disjuntor_block_name = 'Disjuntor_Tri'
