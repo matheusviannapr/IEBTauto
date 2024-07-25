@@ -494,6 +494,11 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
                 disjuntor_block_name = 'Disjuntor_Mono'
                 fios_filename = 'fios_mono2.dxf'
                 fios_block_name = 'Fios_Mono2'
+            elif row['num_fases'] == 2:
+                disjuntor_filename = 'Disjuntor_bi.dxf'
+                disjuntor_block_name = 'Disjuntor_Bi'
+                fios_filename = 'fios_bi.dxf'
+                fios_block_name = 'Fios_Bi'
             elif row['num_fases'] == 3:
                 disjuntor_filename = 'Disjuntor_tri.dxf'
                 disjuntor_block_name = 'Disjuntor_Tri'
@@ -612,25 +617,25 @@ sample_data = [
 ]
 
 # Interface do Streamlit
-st.title('Calculadora de circuitos Elétricos de Baixa Tensão - NBR 5410')
+st.title('Calculadora de Circuitos Elétricos de Baixa Tensão - NBR 5410')
 with st.expander(("Sobre a Calculadora")):
     st.markdown((
         """
-    A Calculadora de Circuitos Elétricos é uma ferramenta para engenheiros e técnicos que trabalham no setor elétrico, especialmente aqueles focados em instalações de baixa tensão. Esta calculadora é desenvolvida com base na norma brasileira NBR 5410, garantindo que todos os cálculos e projetos estejam em conformidade com as regulamentações e padrões de segurança vigentes.
+    A Calculadora de Circuitos Elétricos é uma ferramenta para Engenheiros e Técnicos que trabalham no setor elétrico, especialmente aqueles focados em instalações de baixa tensão. Esta calculadora é desenvolvida com base na norma brasileira NBR 5410, garantindo que todos os cálculos e projetos estejam em conformidade com as regulamentações e padrões de segurança vigentes.
 
     ## Funcionalidades Principais
 
-    ### 1. Exportação de Diagrama Unifilar
-    A calculadora gera diagramas unifilares precisos e detalhados. Estes diagramas são fundamentais para a visualização clara dos circuitos elétricos, mostrando as conexões entre os componentes e facilitando a interpretação e execução do projeto.
+    ### 1. Resolução de Circuitos
+    A calculadora resolve automaticamente os Circuitos Elétricos, levando em consideração todos os parâmetros necessários, como correntes, tensões e potências.
 
-    ### 2. Memória de Cálculo em LaTeX
-    Uma das funcionalidades mais avançadas é a capacidade de exportar a memória de cálculo em LaTeX. Isso proporciona um documento profissional e bem formatado, que pode ser facilmente integrado a relatórios técnicos e documentos oficiais.
+    ### 2. Exportação de Diagrama Unifilar
+    Além disso, a calculadora gera diagramas unifilares referentes aos circuitos dimensionados. Estes diagramas são fundamentais para a visualização do Circuitos Elétricos além de economizar tempo de AutoCAD.
 
-    ### 3. Resolução de Circuitos
-    A calculadora resolve automaticamente os circuitos elétricos, levando em consideração todos os parâmetros necessários, como correntes, tensões e potências. Isso assegura a precisão e eficiência no dimensionamento dos circuitos.
+    ### 3. Memória de Cálculo em LaTeX
+    Outra funcionalidade é a capacidade de exportar uma memória de cálculo dos circuitos em LaTeX. Isso proporciona um documento profissional e bem formatado, que pode ser facilmente integrado a relatórios técnicos e documentos oficiais.
 
-    ### 4. Lista de Materiais
-    Ao final do processo, a ferramenta fornece uma lista completa de materiais necessários para a execução do projeto. Esta lista inclui todos os componentes, suas especificações e quantidades, facilitando a aquisição e logística dos materiais.
+    ### 4. Lista de Materiais com código SINAPI
+    Ao final do processo, a ferramenta fornece uma lista completa de materiais necessários para a execução do projeto com seus códigos SINAPI correspondentes.
 
     """
     ))
@@ -696,10 +701,10 @@ for ckt in uploaded_file_circuitos:
 
 print(uploaded_file_circuitos)
 
-st.subheader("Configuração de Alimentação")
+st.subheader("Configuração de Alimentação Geral")
 tipo_alimentacao = st.selectbox(
     "Selecione o tipo de alimentação geral:",
-    ("Trifásica", "Monofásica", "Bifásica")
+    ("Trifásica", "Bifásica","Monofásica",)
 )
 if tipo_alimentacao == "Trifásica":
     fases_QD = 3
@@ -917,8 +922,15 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             custo_total_quadros = calcular_custo_totalquadros(quadros_escolhidos_df, sinapi_df)
             df_custosconcat = pd.concat([custo_total_quadros, custos_disj, custos_df], axis=0, ignore_index=True)
             print(custos_df)
-            st.write(df_selecionado)
+            st.write(df_selecionado[['Nome do Circuito','Seção do Condutor (mm²)','Disjuntor','Quantidade de condutor fase','Seção do Condutor Neutro (mm²)','Comprimento neutro','Seção do Condutor de Terra (mm²)','Comprimento terra']])
+            st.subheader('Orçamento com Base SINAPI')
             st.write(df_custosconcat)
+            total_custo = df_custosconcat['Custo Total'].sum()
+            st.markdown((
+                    f"""
+                O custo total é de **R$ {total_custo:.2f}**
+                    """
+            ))
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
             output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
