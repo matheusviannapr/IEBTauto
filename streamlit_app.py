@@ -935,6 +935,7 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
             output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
             st.success(f"Diagrama salvo em {output_path}")
+            st.success(f"Memorial de Cálculo salvo em memcalc.tex")
             col1, col2 = st.columns(2)
             with col1:
                 st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
@@ -942,7 +943,6 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
             criar_relatorio_latex(exemplos_circuitos, resultados_circuitos, caminho_arquivo,disjuntoresgerais,disjQGBT,data_tables)
-            st.success(f"Memorial de Cálculo salvo em memcalc.tex")
             with col2:
                 st.download_button(label="Baixar Memorial de Cálculo", data=open('memcalc.tex', "rb").read(), file_name='memcalc.tex')
             with st.expander(("Como abrir o Diagrama Unifilar")):
