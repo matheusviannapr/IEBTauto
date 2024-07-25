@@ -779,6 +779,17 @@ disjuntores_mapping = {
         '10A': 93667, '16A': 93668, '20A': 93669, '25A': 93670, '32A': 93671, '40A': 93672, '50A': 93673
     }
 }
+
+sinapi_quadros = {
+    3: 101877,
+    6: 101876,
+    12: 101875,
+    18: 101878,
+    24: 101879,
+    30: 101880,
+    40: 101881
+}
+
 sinapi_df = pd.read_excel('sinapi.xls', sheet_name='Planilha1')
 def get_disjuntor_sinapi(row):
     fases = row['Número de fases']
@@ -810,14 +821,42 @@ def calcular_custo_totaldisj(df, sinapi_df1):
     
     return df_agrupado
 
+def escolher_quadro(circuitos, sinapi_quadros):
+    for max_circuitos in sorted(sinapi_quadros.keys()):
+        if circuitos <= max_circuitos - 2:
+            return sinapi_quadros[max_circuitos]
+    return sinapi_quadros[max(sinapi_quadros.keys())]
+
+def calcular_custo_totalquadros(df, sinapi_df1):
+    # Criar um dicionário para mapeamento
+    custo_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['CUSTO TOTAL'].to_dict()
+    nome_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['DESCRICAO DA COMPOSICAO'].to_dict()
+    
+    # Mapear os custos totais e descrições para cada código no DataFrame df
+    df['Descrição da Composição'] = df['Codigo'].map(nome_dict)
+    df['Custo Unitário'] = df['Codigo'].map(custo_dict)
+    
+    # Agrupar por código e calcular a quantidade total e custo total
+    df_agrupado = df['Codigo'].value_counts().reset_index()
+    df_agrupado.columns = ['Codigo', 'Quantidade']
+    df_agrupado['Descrição da Composição'] = df_agrupado['Codigo'].map(nome_dict)
+    df_agrupado['Custo Unitário'] = df_agrupado['Codigo'].map(custo_dict)
+    df_agrupado['Custo Total'] = df_agrupado['Quantidade'] * df_agrupado['Custo Unitário']
+    
+    return df_agrupado
+
 if uploaded_file_dados and st.button('Calcular Parâmetros'):
     data_tables = uploaded_file_dados
     if data_tables is not None:
         exemplos_circuitos = uploaded_file_circuitos
-        #exemplos_circuitos = reordenar_colunas(exemplos_circuitos)
+        exemplos_circuitos_df = pd.DataFrame(exemplos_circuitos)
+        quadros_counts = exemplos_circuitos_df.groupby('Quadro').size()
+        quadros_escolhidos = quadros_counts.apply(lambda x: escolher_quadro(x, sinapi_quadros))
+        quadros_escolhidos_df = pd.DataFrame(quadros_escolhidos, columns=['Codigo'])
 
         if exemplos_circuitos is not None:
             exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
+            print(exemplos_circuitos)
             for circuito in exemplos_circuitos:
                 circuito['queda_tensao_max_admitida'] = 0.05 * circuito['tensao']
             resultados_circuitos, exemplos_circuitos = calcular_parametros_circuitos(exemplos_circuitos, data_tables)
@@ -874,8 +913,8 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             df_disjuntoresaux = df_selecionado.apply(get_disjuntor_sinapi, axis=1)
             df_disjuntores = df_disjuntoresaux.to_frame(name='Codigo')
             custos_disj=calcular_custo_totaldisj(df_disjuntores,sinapi_df)
-            print(custos_disj)
-            df_custosconcat = pd.concat([custos_df, custos_disj], axis=0, ignore_index=True)
+            custo_total_quadros = calcular_custo_totalquadros(quadros_escolhidos_df, sinapi_df)
+            df_custosconcat = pd.concat([custo_total_quadros, custos_disj, custos_df], axis=0, ignore_index=True)
             print(custos_df)
             st.write(df_selecionado)
             st.write(df_custosconcat)
