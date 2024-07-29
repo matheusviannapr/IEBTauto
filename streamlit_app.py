@@ -201,6 +201,8 @@ def distribuir_fases(circuitos, fases_qd):
             if num_fases == 1:
                 carga_fase['R'] += potencia
                 circuito['Fases'] = 'R'
+            else:
+                st.warning('Existem circuitos que necessitam de mais de uma fase, reveja a Configuração da Alimentação Geral', icon="⚠️")
     
     return circuitos
 
@@ -438,6 +440,14 @@ def compile_tex_online(tex_content):
         return response.content  # Retornando o conteúdo do PDF gerado
     else:
         return None
+    
+def selecionar_dr(corrente_disjuntor):
+    # Lista de correntes nominais dos DRs
+    correntes_dr = [25, 40, 63, 80]
+    for corrente in correntes_dr:
+        if corrente_disjuntor < corrente:
+            return corrente
+    return None  # Retorna None se não encontrar um DR adequado
 
 def adicionar_unidades(df):
     df['potencia'] = df['potencia'].astype(str) + ' W'
@@ -473,7 +483,8 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
             'Seção do Condutor (mm²)': [f"{circuito['Seção do Condutor (mm²)']} mm2" for circuito in df_quadro.to_dict('records')],
             'Disjuntor (Ampere)': [f"{circuito['Disjuntor (Ampere)']} A" for circuito in df_quadro.to_dict('records')],
             'Fases': [circuito['Fases'] for circuito in df_quadro.to_dict('records')],
-            'num_fases1': [circuito['num_fases1'] for circuito in df_quadro.to_dict('records')]
+            'num_fases1': [circuito['num_fases1'] for circuito in df_quadro.to_dict('records')],
+            'DR': [circuito['DR'] for circuito in df_quadro.to_dict('records')]
         })
         df_ordenado_unifilar = ordenar_por_nome(df_unifilar)
 
@@ -511,9 +522,22 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
                 'nome': row['nome'],
                 'fases': row['Fases']
             }
+            corrente_disjuntor = int(row['Disjuntor (Ampere)'].replace(' A', ''))
             insert_point_disjuntor = (x_offset, y_offset)
             insert_dxf_block_with_attributes(msp, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes)
-            insert_point_fios = (x_offset + 70, y_offset + 30)
+            if row['DR'] == True:
+                corrente_dr = selecionar_dr(corrente_disjuntor)
+                print("corrente_dr")
+                print(corrente_dr)
+                if corrente_dr:
+                    dr_filename = 'DR.dxf'
+                    dr_block_name = 'DR'
+                    dr_attributes = {'corrente': f'{str(corrente_dr)} A'} 
+                    insert_point_dr = (x_offset + 70, y_offset + 30)  # Ajusta a posição do DR
+                    insert_dxf_block_with_attributes(msp, dr_filename, dr_block_name, insert_point_dr, dr_attributes)
+                    insert_point_fios = (x_offset + 80, y_offset + 30)  # Ajusta a posição dos fios após o DR
+            else:
+                insert_point_fios = (x_offset + 70, y_offset + 30)
             insert_dxf_block_with_attributes(msp, fios_filename, fios_block_name, insert_point_fios, fios_attributes)
             if index == circuito_central_index:
                 if fases_Q == 3:
@@ -528,6 +552,12 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
                  }
                  insert_point_fios_bi = (x_offset, y_offset + 30)
                  insert_dxf_block_with_attributes(msp, 'entrada_bi.dxf', 'entrada', insert_point_fios_bi, fios_bi_attributes)
+                elif fases_Q == 1:
+                 fios_mono_attributes = {
+                    'CORRENTE': str(disjuntores_gerais[nome_quadro])
+                 }
+                 insert_point_fios_mono = (x_offset, y_offset + 30)
+                 insert_dxf_block_with_attributes(msp, 'entrada_mono.dxf', 'entrada', insert_point_fios_mono, fios_mono_attributes)
             y_offset -= 30
             
 
@@ -588,6 +618,7 @@ sample_data = [
         "num_circuitos": 2,
         "comprimento": 0.1,
         "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "DR": True,
         "Quadro": "Q1"
     },
     {
@@ -600,6 +631,7 @@ sample_data = [
         "num_circuitos": 3,
         "comprimento": 0.2,
         "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "DR": False,
         "Quadro": "Q1"
     },
     {
@@ -612,6 +644,7 @@ sample_data = [
         "num_circuitos": 1,
         "comprimento": 0.15,
         "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "DR": False,
         "Quadro": "Q1"
     }
 ]
@@ -675,6 +708,7 @@ config = {
     "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
     "comprimento": st.column_config.NumberColumn("Comprimento (km)"),
     "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
+    "DR": st.column_config.CheckboxColumn("Possui DR"),
     "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
 }
 
