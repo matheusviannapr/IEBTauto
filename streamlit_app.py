@@ -762,7 +762,7 @@ sample_data = [
         "tensao": 220,
         "fator_potencia": 0.95,
         "num_fases1": "F+N",
-        "temperatura": 30,
+        "temperatura": 35,
         "num_circuitos": 2,
         "comprimento": 0.1,
         "met_instala": "3 condutores carregados – método B1",
