@@ -332,6 +332,7 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         valor_queda_tensao = tabela_queda_tensao.loc[tabela_queda_tensao['seção do condutor'] == secao_condutor, 'Queda de tensão (V/A.km)'].iloc[0]
         queda_tensao = valor_queda_tensao * corrente_nominal * comprimento
         queda_tensao = round(queda_tensao,2)
+
         n_factor = '0' if num_fases == 1 else '1' if num_fases == 2 else '2'
         latex_content += f"\\subsection*{{Circuito: {nome}}}\n"
         latex_content += "\\begin{itemize}\n"
@@ -346,6 +347,7 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         latex_content += f"    \\begin{{align*}}\n"
         latex_content += f"    I_{{\\text{{nominal}}}} &= {corrente_nominal} \\text{{ A}}, \\\\\n"
         latex_content += f"    \\text{{Comprimento}} &= {comprimento} \\text{{ km}}, \\\\\n"
+        latex_content += f"    \\text{{Seção do Condutor (mm²)}} &= {circuito['Seção do Condutor (mm²)']} \\text{{ mm²}}, \\\\\n"
         latex_content += f"    \\text{{Queda de Tensão (V/A.km)}} &= {valor_queda_tensao} \\text{{ V/A.km}}. \n"
         latex_content += f"    \\end{{align*}}\n"
         latex_content += f"    Portanto, a queda de tensão calculada é: \n"
@@ -426,6 +428,152 @@ def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_ger
     doc.append(NoEscape(tabela_latex))
     memcal = memcalc(circuitos, resultados, data_tables['queda de tensão'])
     doc.append(NoEscape(memcal))
+    doc.append(NoEscape(r"""
+                        \newpage
+                        """))
+    with doc.create(Section('Anexo - Tabelas da NBR 5410')):
+        doc.append(NoEscape(r"""
+            As tabelas apresentadas a seguir são utilizadas no memorial de cálculo e foram retiradas da norma NBR 5410. 
+            Elas servem como referência para determinar capacidades de condução de corrente, fatores de correção de temperatura, fatores de agrupamento de circuitos, queda de tensão por seção de condutor, e seções mínimas dos condutores de proteção (terra) e neutro. 
+            Essas informações são essenciais para garantir a segurança e a eficiência das instalações elétricas, conforme os padrões exigidos pela norma.
+
+            \begin{table}[h]
+            \centering
+            \resizebox{\textwidth}{!}{%
+            \begin{tabular}{|c|c|c|c|c|c|c|}
+            \hline
+            \multirow{2}{*}{\textbf{Seção do condutor}} & \multicolumn{2}{c|}{\textbf{Método B1}} & \multicolumn{2}{c|}{\textbf{Método B2}} & \multicolumn{2}{c|}{\textbf{Método C}} \\ \cline{2-7}
+            & \textbf{2 condutores carregados} & \textbf{3 condutores carregados} & \textbf{2 condutores carregados} & \textbf{3 condutores carregados} & \textbf{2 condutores carregados} & \textbf{3 condutores carregados} \\ \hline
+            2.5 mm² & 31 A & 28 A & 30 A & 26 A & 33 A & 30 A \\ \hline
+            4 mm² & 42 A & 37 A & 40 A & 35 A & 45 A & 40 A \\ \hline
+            6 mm² & 54 A & 48 A & 51 A & 44 A & 58 A & 52 A \\ \hline
+            10 mm² & 75 A & 66 A & 69 A & 60 A & 80 A & 71 A \\ \hline
+            16 mm² & 100 A & 88 A & 91 A & 80 A & 107 A & 96 A \\ \hline
+            25 mm² & 133 A & 117 A & 119 A & 105 A & 138 A & 119 A \\ \hline
+            35 mm² & 164 A & 144 A & 146 A & 128 A & 171 A & 147 A \\ \hline
+            50 mm² & 198 A & 175 A & 175 A & 154 A & 209 A & 179 A \\ \hline
+            70 mm² & 253 A & 222 A & 221 A & 194 A & 269 A & 229 A \\ \hline
+            95 mm² & 306 A & 269 A & 265 A & 233 A & 328 A & 278 A \\ \hline
+            120 mm² & 354 A & 312 A & 305 A & 268 A & 382 A & 322 A \\ \hline
+            150 mm² & 407 A & 358 A & 349 A & 307 A & 441 A & 371 A \\ \hline
+            185 mm² & 464 A & 408 A & 395 A & 348 A & 508 A & 424 A \\ \hline
+            240 mm² & 546 A & 481 A & 462 A & 407 A & 599 A & 500 A \\ \hline
+            \end{tabular}
+            }
+            \caption{Tabela de capacidades de condução de corrente para diferentes seções de condutores e métodos de instalação.}
+            \label{tab:capacidades}
+            \end{table}
+
+            \vspace{0.3cm} % Espaço vertical reduzido
+
+            \begin{table}[h]
+            \centering
+            \begin{tabular}{|c|c|}
+            \hline
+            \textbf{Temperatura} & \textbf{Fator de correção de Temperatura} \\ \hline
+            10 ºC & 1.15 \\ \hline
+            15 ºC & 1.12 \\ \hline
+            20 ºC & 1.08 \\ \hline
+            25 ºC & 1.04 \\ \hline
+            35 ºC & 0.96 \\ \hline
+            40 ºC & 0.91 \\ \hline
+            45 ºC & 0.87 \\ \hline
+            \end{tabular}
+            \caption{Tabela de Fatores de Temperatura}
+            \label{tab:fatores_temperatura}
+            \end{table}
+
+            \vspace{0.3cm} % Espaço vertical reduzido
+
+            \begin{table}[h]
+            \centering
+            \begin{tabular}{|c|c|}
+            \hline
+            \textbf{Agrupamento de circuitos} & \textbf{Fator de Agrupamento} \\ \hline
+            1 & 1 \\ \hline
+            2 & 0.8 \\ \hline
+            3 & 0.7 \\ \hline
+            4 & 0.65 \\ \hline
+            5 & 0.65 \\ \hline
+            6 & 0.57 \\ \hline
+            7 & 0.54 \\ \hline
+            8 & 0.52 \\ \hline
+            9 & 0.5 \\ \hline
+            10 & 0.5 \\ \hline
+            \end{tabular}
+            \caption{Tabela de Fatores de Agrupamento de Circuitos}
+            \label{tab:fatores_agrupamento}
+            \end{table}
+
+            \vspace{0.3cm} % Espaço vertical reduzido
+
+            \begin{table}[h]
+            \centering
+            \begin{tabular}{|c|c|}
+            \hline
+            \textbf{Seção do condutor} & \textbf{Queda de tensão (V/A.km)} \\ \hline
+            2.5 mm² & 18 \\ \hline
+            4 mm² & 12 \\ \hline
+            6 mm² & 7.6 \\ \hline
+            10 mm² & 4.5 \\ \hline
+            16 mm² & 2.7 \\ \hline
+            25 mm² & 1.7 \\ \hline
+            35 mm² & 1.2 \\ \hline
+            50 mm² & 0.96 \\ \hline
+            70 mm² & 0.67 \\ \hline
+            95 mm² & 0.48 \\ \hline
+            120 mm² & 0.38 \\ \hline
+            150 mm² & 0.31 \\ \hline
+            185 mm² & 0.25 \\ \hline
+            240 mm² & 0.19 \\ \hline
+            \end{tabular}
+            \caption{Tabela de Queda de Tensão por Seção do Condutor}
+            \label{tab:queda_tensao}
+            \end{table}
+
+            \vspace{0.3cm} % Espaço vertical reduzido
+
+            \begin{table}[h]
+            \centering
+            \resizebox{\textwidth}{!}{%
+            \begin{tabular}{|c|c|}
+            \hline
+            \textbf{Seção dos condutores de fase S (mm²)} & \textbf{Seção mínima do condutor de proteção (mm²)} \\ \hline
+            S $\leq$ 16 & S \\ \hline
+            16 $<$ S $\leq$ 35 & 16 \\ \hline
+            S $>$ 35 & S/2 \\ \hline
+            \end{tabular}
+            }
+            \caption{Seção mínima do condutor de proteção (terra)}
+            \label{tab:secao_condutor_protecao}
+            \end{table}
+
+            \vspace{0.3cm} % Espaço vertical reduzido
+
+            \begin{table}[h]
+            \centering
+            \resizebox{\textwidth}{!}{%
+            \begin{tabular}{|c|c|}
+            \hline
+            \textbf{Seção dos condutores de fase (mm²)} & \textbf{Seção reduzida do condutor neutro (mm²)} \\ \hline
+            S $\leq$ 25 & S \\ \hline
+            35 & 25 \\ \hline
+            50 & 25 \\ \hline
+            70 & 35 \\ \hline
+            95 & 50 \\ \hline
+            120 & 70 \\ \hline
+            150 & 70 \\ \hline
+            185 & 95 \\ \hline
+            240 & 120 \\ \hline
+            300 & 150 \\ \hline
+            400 & 185 \\ \hline
+            \end{tabular}
+            }
+            \caption{Seção reduzida do condutor neutro}
+            \label{tab:secao_condutor_neutro}
+            \end{table}
+
+            """))
     # Salvar o arquivo .tex
     doc.generate_tex(caminho_salvar)
 
@@ -617,7 +765,7 @@ sample_data = [
         "temperatura": 30,
         "num_circuitos": 2,
         "comprimento": 0.1,
-        "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "met_instala": "3 condutores carregados – método B1",
         "DR": True,
         "Quadro": "Q1"
     },
@@ -630,7 +778,7 @@ sample_data = [
         "temperatura": 35,
         "num_circuitos": 3,
         "comprimento": 0.2,
-        "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "met_instala": "3 condutores carregados – método B1",
         "DR": False,
         "Quadro": "Q1"
     },
@@ -643,7 +791,7 @@ sample_data = [
         "temperatura": 25,
         "num_circuitos": 1,
         "comprimento": 0.15,
-        "met_instala": "3 condutores carregados – método B1 ( Amperes)",
+        "met_instala": "3 condutores carregados – método B1",
         "DR": False,
         "Quadro": "Q1"
     }
@@ -684,12 +832,12 @@ data_sheets = pd.read_excel('Dados para o gpt.xls', sheet_name=None)
 uploaded_file_dados = {sheet_name: data_sheets[sheet_name] for sheet_name in data_sheets}
 
 methods = [
-    "2 condutores carregados – método B1 ( Amperes)",
-    "3 condutores carregados – método B1 ( Amperes)",
-    "2 condutores carregados – método B2 ( Amperes)",
-    "3 condutores carregados – método B2 ( Amperes)",
-    "2 condutores carregados – método C ( Amperes)",
-    "3 condutores carregados – método C (Amperes)"
+    "2 condutores carregados – método B1",
+    "3 condutores carregados – método B1",
+    "2 condutores carregados – método B2",
+    "3 condutores carregados – método B2",
+    "2 condutores carregados – método C",
+    "3 condutores carregados – método C"
 ]
 faseslabel = [
     "F+N",
@@ -708,7 +856,7 @@ config = {
     "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
     "comprimento": st.column_config.NumberColumn("Comprimento (km)"),
     "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
-    "DR": st.column_config.CheckboxColumn("Possui DR"),
+    "DR": st.column_config.CheckboxColumn("Área molhada"),
     "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
 }
 
@@ -962,7 +1110,7 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             total_custo = df_custosconcat['Custo Total'].sum()
             st.markdown((
                     f"""
-                O custo total é de **R$ {total_custo:.2f}**
+                O custo total é de **R$ {total_custo:,.2f}**
                     """
             ))
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
