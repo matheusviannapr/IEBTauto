@@ -798,6 +798,7 @@ sample_data = [
 ]
 
 # Interface do Streamlit
+st.image('iebt.png')
 st.title('Calculadora de Circuitos Elétricos de Baixa Tensão - NBR 5410')
 with st.expander(("Sobre a Calculadora")):
     st.markdown((
