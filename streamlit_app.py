@@ -34,13 +34,18 @@ def encontrar_fator_agrupamento(num_circuitos, tabela_agrupamento):
     else:
         raise ValueError("Número de circuitos fora do alcance da tabela.")
 
-def determinar_secao_condutor(corrente, tabela_capacidade, metodo_instalacao):
+def determinar_secao_condutor(corrente, tabela_capacidade, metodo_instalacao, nome_circuito):
     coluna_capacidade = [col for col in tabela_capacidade.columns if metodo_instalacao in col][0]
     secoes_suportadas = tabela_capacidade[tabela_capacidade[coluna_capacidade] >= corrente]
+
+    # Filtrar 1.5 mm² se o nome do circuito não contém "iluminação"
+    if "iluminação" not in nome_circuito.lower():
+        secoes_suportadas = secoes_suportadas[secoes_suportadas['Seção do condutor'] != 1.5]
+
     if not secoes_suportadas.empty:
         return secoes_suportadas.iloc[0]['Seção do condutor']
     else:
-        raise ValueError("Corrente muito alta para as seções de condutores disponíveis.")
+        raise ValueError(f"Corrente muito alta para as seções disponíveis. Nenhuma seção adequada encontrada para o circuito '{nome_circuito}'.")
 
 def encontrar_capacidade_corrente(secao_condutor, tabela_capacidade, metodo_instalacao):
     colunas_validas = [col for col in tabela_capacidade.columns if metodo_instalacao in col]
@@ -107,7 +112,7 @@ def calcular_parametros_circuitos(lista_circuitos, data_tables):
         corrente_corrigida = corrente_nominal / (fator_correcao_temp * fator_agrupamento)
         installmet=circuito['num_fases1']
 
-        secao_inicial = determinar_secao_condutor(corrente_corrigida, data_tables['Capacidade de corrente'], circuito['met_instala'])
+        secao_inicial = determinar_secao_condutor(corrente_corrigida, data_tables['Capacidade de corrente'], circuito['met_instala'], circuito['nome'])
         secao_final, queda_tensao_final = ajustar_condutor_queda_tensao(corrente_nominal, circuito['comprimento'], secao_inicial, circuito['queda_tensao_max_admitida'], data_tables['Capacidade de corrente'], data_tables['queda de tensão'])
         disjuntor = determinar_disjuntor(corrente_corrigida, secao_final, data_tables['valores nominais de disjuntores'], data_tables['Capacidade de corrente'], circuito['met_instala'],circuito['num_fases'])
 
