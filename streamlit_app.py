@@ -860,7 +860,7 @@ config = {
     "num_fases1": st.column_config.SelectboxColumn("Número de Fases",options=faseslabel),
     "temperatura": st.column_config.SelectboxColumn("Temperatura", options=temp),
     "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
-    "comprimento": st.column_config.NumberColumn("Comprimento (km)"),
+    "comprimento": st.column_config.NumberColumn("Comprimento (m)"),
     "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
     "DR": st.column_config.CheckboxColumn("Área molhada"),
     "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
@@ -1053,6 +1053,7 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
             print(exemplos_circuitos)
             for circuito in exemplos_circuitos:
+                circuito['comprimento'] = circuito['comprimento'] / 1000 
                 circuito['queda_tensao_max_admitida'] = 0.05 * circuito['tensao']
             resultados_circuitos, exemplos_circuitos = calcular_parametros_circuitos(exemplos_circuitos, data_tables)
             st.subheader('Resultados dos Circuitos')
