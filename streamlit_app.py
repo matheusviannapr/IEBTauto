@@ -222,7 +222,7 @@ def encontrar_disjuntor_menor(corrente, tabela_disjuntores):
 def ordenar_circuitos(circuitos):
     def extrair_numero(nome):
         import re
-        match = re.match(r'^(\d+)', nome)
+        match = re.match(r'^(\d+)-', nome)
         return int(match.group(1)) if match else float('inf')
     
     return sorted(circuitos, key=lambda x: (x['Quadro'], extrair_numero(x['nome']), -x['num_fases'], -x['potencia']))
