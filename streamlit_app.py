@@ -222,10 +222,12 @@ def encontrar_disjuntor_menor(corrente, tabela_disjuntores):
 def ordenar_circuitos(circuitos):
     def extrair_numero(nome):
         import re
-        # Tenta encontrar qualquer número no início do nome do circuito
-        match = re.search(r'^(?:\D*)(\d+)(?:-|$)', nome)
+        # Divide a string no traço e pega a primeira parte
+        parte_antes = nome.split('-')[0] if '-' in nome else nome
+        # Procura um número na parte antes do traço
+        match = re.search(r'\d+', parte_antes)
         try:
-            return int(match.group(1)) if match else float('inf')
+            return int(match.group()) if match else float('inf')
         except (AttributeError, ValueError):
             return float('inf')
     
