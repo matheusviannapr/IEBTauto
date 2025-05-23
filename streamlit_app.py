@@ -649,8 +649,8 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
             'num_fases1': [circuito['num_fases1'] for circuito in df_quadro.to_dict('records')],
             'DR': [circuito['DR'] for circuito in df_quadro.to_dict('records')]
         })
-        df_ordenado_unifilar = ordenar_circuitos(df_unifilar)
-
+        df_ordenado_unifilar = ordenar_por_nomes(df_unifilar)
+        df_ordenado_unifilar = ordenar_circuitos(df_ordenado_unifilar)
         quadro_min_x = float('inf')
         quadro_min_y = float('inf')
         quadro_max_x = float('-inf')
