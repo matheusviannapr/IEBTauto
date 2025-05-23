@@ -222,10 +222,22 @@ def encontrar_disjuntor_menor(corrente, tabela_disjuntores):
 def ordenar_circuitos(circuitos):
     def extrair_numero(nome):
         import re
-        match = re.match(r'^(\d+)-', nome)
-        return int(match.group(1)) if match else float('inf')
+        # Tenta encontrar qualquer número no início do nome do circuito
+        match = re.search(r'^(?:\D*)(\d+)', nome)
+        try:
+            return int(match.group(1)) if match else float('inf')
+        except (AttributeError, ValueError):
+            return float('inf')
     
-    return sorted(circuitos, key=lambda x: (x['Quadro'], extrair_numero(x['nome']), -x['num_fases'], -x['potencia']))
+    # Ordena primeiro por quadro, depois por número do circuito (se existir),
+    # depois por número de fases (decrescente) e finalmente por potência (decrescente)
+    return sorted(circuitos, key=lambda x: (
+        x.get('Quadro', ''),  # Usa get() para evitar KeyError
+        extrair_numero(x.get('nome', '')),
+        -x.get('num_fases', 0),
+        -x.get('potencia', 0)
+    ))
+
 
 def criar_lista_materiais(circuitos, disjuntores_gerais):
     materiais = {}
