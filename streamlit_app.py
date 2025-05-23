@@ -223,7 +223,7 @@ def ordenar_circuitos(circuitos):
     def extrair_numero(nome):
         import re
         # Tenta encontrar qualquer número no início do nome do circuito
-        match = re.search(r'^(?:\D*)(\d+)', nome)
+        match = re.search(r'^(?:\D*)(\d+)(?:-|$)', nome)
         try:
             return int(match.group(1)) if match else float('inf')
         except (AttributeError, ValueError):
