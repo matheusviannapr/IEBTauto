@@ -629,7 +629,6 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
     # Agrupa os circuitos pelo quadro
     if not isinstance(exemplos_circuitos, pd.DataFrame):
         exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
-    exemplos_circuitos = ordenar_circuitos(exemplos_circuitos)
     quadros = exemplos_circuitos.groupby('Quadro')
     
     x_offset = 0
