@@ -221,27 +221,16 @@ def encontrar_disjuntor_menor(corrente, tabela_disjuntores):
 
 def ordenar_circuitos(circuitos):
     def extrair_numero(nome):
-        import re
-        if not nome:
-            return float('inf')
-        # Divide a string no traço e pega a primeira parte
-        parte_antes = nome.split('-')[0] if '-' in nome else nome
-        # Procura por números no início da string ou após letras
-        match = re.search(r'^\d+|(?<=\D)\d+', parte_antes)
-        try:
-            return int(match.group()) if match else float('inf')
-        except (AttributeError, ValueError):
-            return float('inf')
+        # Extrai o número antes do traço do nome do circuito
+        partes = nome.split('-')
+        if len(partes) > 0:
+            try:
+                return int(''.join(filter(str.isdigit, partes[0])))
+            except ValueError:
+                return float('inf')  # Caso não tenha número, coloca no final
+        return float('inf')
     
-    # Ordena primeiro por quadro, depois por número do circuito (se existir),
-    # depois por número de fases (decrescente) e finalmente por potência (decrescente)
-    return sorted(circuitos, key=lambda x: (
-        x.get('Quadro', ''),  # Usa get() para evitar KeyError
-        extrair_numero(x.get('nome', '')),
-        -x.get('num_fases', 0),
-        -x.get('potencia', 0)
-    ))
-
+    return sorted(circuitos, key=lambda x: extrair_numero(x['nome']))
 
 def criar_lista_materiais(circuitos, disjuntores_gerais):
     materiais = {}
@@ -321,7 +310,7 @@ def formatar_tabela_latex(circuitos, disjuntores_gerais, disjuntor_qgbt):
     tabela_latex +="\\fontsize{5}{5}\selectfont \n"
     tabela_latex += "\\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|}\n\\hline\n"
     tabela_latex += "Nome do Circuito & Potência (W) & Tensão (V) & FP & Nº de Fases & Temp (°C) & Nº de Circuitos & Comprimento (km) & Condutor(mm²) & Disjuntor(A) & delta (V) & Fases & Quadro \\\\ \\hline\n"
-    circuitos_ordenados = sorted(circuitos, key=lambda x: x['nome'])
+    circuitos_ordenados = ordenar_circuitos(circuitos)
     for circuito in circuitos_ordenados:
         linha = f"{circuito['nome']} & {circuito['potencia']} & {circuito['tensao']} & {circuito['fator_potencia']} & {circuito['num_fases']} & {circuito['temperatura']} & {circuito['num_circuitos']} & {circuito['comprimento']} & {circuito['Seção do Condutor (mm²)']} & {circuito['Disjuntor (Ampere)']} & {round(circuito['Queda de Tensão (Volts)'],2)} & {circuito['Fases']} & {circuito['Quadro']} \\\\ \\hline\n"
         tabela_latex += linha
@@ -339,7 +328,7 @@ def formatar_tabela_latex(circuitos, disjuntores_gerais, disjuntor_qgbt):
 
 def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
     latex_content = "\\section{Memória de Cálculo dos Circuitos}\n\n"
-    circuitos_ordenados = sorted(circuitos, key=lambda x: x['nome'])
+    circuitos_ordenados = ordenar_circuitos(circuitos)
     for circuito in circuitos_ordenados:
         nome = circuito['nome']
         potencia = circuito['potencia']
