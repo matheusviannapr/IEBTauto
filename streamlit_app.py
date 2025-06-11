@@ -347,9 +347,10 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         valor_queda_tensao = tabela_queda_tensao.loc[tabela_queda_tensao['seção do condutor'] == secao_condutor, 'Queda de tensão (V/A.km)'].iloc[0]
         queda_tensao = valor_queda_tensao * corrente_nominal * comprimento
         queda_tensao = round(queda_tensao,2)
+        quadro = circuito['Quadro']
 
         n_factor = '0' if num_fases == 1 else '1' if num_fases == 2 else '2'
-        latex_content += f"\\subsection*{{Circuito: {nome}}}\n"
+        latex_content += f"\\subsection*{{Circuito: {nome} - {quadro} }}\n"
         latex_content += "\\begin{itemize}\n"
         latex_content += f"    \\item \\textbf{{Dados do Circuito:}} Potência = {potencia}W, Tensão = {tensao}V, Fator de Potência = {fator_potencia}, Número de Fases = {num_fases}.\n"
         latex_content += f"    \\item \\textbf{{Cálculo da Corrente Nominal (Inominal):}} \[ I_{{\\text{{nominal}}}} = \\frac{{{potencia}}}{{\\sqrt{{3}}^{{{n_factor}}} \\times {tensao} \\times {fator_potencia}}} \] = {corrente_nominal} A.\n"
