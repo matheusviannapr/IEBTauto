@@ -229,8 +229,8 @@ def ordenar_circuitos(circuitos):
             except ValueError:
                 return float('inf')  # Caso não tenha número, coloca no final
         return float('inf')
-    
-    return sorted(circuitos, key=lambda x: extrair_numero(x['nome']))
+
+    return sorted(circuitos, key=lambda x: (x['Quadro'], extrair_numero(x['nome'])))
 
 def criar_lista_materiais(circuitos, disjuntores_gerais):
     materiais = {}
