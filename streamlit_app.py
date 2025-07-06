@@ -1115,7 +1115,8 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                     insert_point_fios_mono = (x_offset, y_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_mono.dxf', 'Trifi_entrada', insert_point_fios_mono, fios_mono_attributes, doc_trifilar)
             
-            y_offset -= 30
+            # Usa o valor de vertical_offset para determinar o espaçamento vertical entre os circuitos
+            y_offset -= vertical_offset
 
             quadro_min_x = -70
             quadro_min_y = y_offset
