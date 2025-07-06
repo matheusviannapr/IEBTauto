@@ -1089,7 +1089,7 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
             # Insere a entrada do quadro no circuito central
             if index == circuito_central_index:
                 # Define o offset vertical para a entrada do quadro com base no número de fases
-                entrada_offset = 50 if fases_Q == 3 else 30
+                entrada_offset = 60 if fases_Q == 3 else 40
                 
                 if fases_Q == 3:
                     entrada_tri_attributes = {
