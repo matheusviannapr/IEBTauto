@@ -501,19 +501,19 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2460863.647627315
+2460863.688090278
   9
 $TDUUPDATE
  40
-2460863.772627315
+2460863.813090278
   9
 $TDINDWG
  40
-0.1015277778
+0.1026273148
   9
 $TDUSRTIMER
  40
-0.1015277778
+0.1026273148
   9
 $USRTIMER
  70
@@ -553,7 +553,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-843
+868
   9
 $SURFTAB1
  70
@@ -937,7 +937,7 @@ $FINGERPRINTGUID
   9
 $VERSIONGUID
   2
-{E6B0793A-DF2B-F442-9FC6-82BDA96230B8}
+{E84076AF-E476-704F-AF07-005C995348D3}
   9
 $EXTNAMES
 290
@@ -1247,7 +1247,7 @@ ObjectDBX Classes
  90
      1152
  91
-        1
+        2
 280
      0
 281
@@ -1407,7 +1407,7 @@ AcAeEditorObj
  90
      1024
  91
-        0
+        1
 280
      0
 281
@@ -1423,7 +1423,7 @@ ObjectDBX Classes
  90
      1153
  91
-        2
+        3
 280
      0
 281
@@ -1491,9 +1491,9 @@ AcDbViewportTableRecord
  21
 1.0
  12
-97.0911755539984
+59.51314149556748
  22
-3.164919525669006
+-13.36906583819453
  13
 0.0
  23
@@ -1519,9 +1519,9 @@ AcDbViewportTableRecord
  37
 0.0
  40
-235.0804808586797
+362.5046106534318
  41
-1.92866082603254
+1.919117647058823
  42
 50.0
  43
@@ -2421,7 +2421,7 @@ BLOCK_RECORD
 102
 {ACAD_XDICTIONARY
 360
-834
+85E
 102
 }
 330
@@ -2515,7 +2515,7 @@ FF302821FF302821FF302821FF302821FF302821FF302821FF302821FF302821FF302821FF302821
 1001
 AcDbDynamicBlockGUID
 1000
-{3DED5E25-72C4-DE4D-B748-AE0A917DFF70}
+{523DFEDA-8061-BA49-ABC6-BA82943519D6}
   0
 BLOCK_RECORD
   5
@@ -2553,7 +2553,7 @@ Disjuntor tri
 1001
 AcDbDynamicBlockGUID
 1000
-{B829CDD2-4B2C-1642-98CB-696DE742A3B6}
+{A3510F0F-5AA7-E647-A109-472DFDBD0160}
   0
 BLOCK_RECORD
   5
@@ -2591,7 +2591,7 @@ Disjuntor_Mono
 1001
 AcDbDynamicBlockGUID
 1000
-{E1B5FCC8-C26A-3F47-A9DB-4287F231A19B}
+{4C380E0E-BF8A-3344-92F6-ECECC87C0ED4}
   0
 BLOCK_RECORD
   5
@@ -3057,7 +3057,7 @@ Trifi_Disjuntor_Mono
   0
 LINE
   5
-820
+84A
 330
 2F1
 100
@@ -3085,7 +3085,7 @@ AcDbLine
   0
 CIRCLE
   5
-821
+84B
 330
 2F1
 100
@@ -3107,7 +3107,7 @@ AcDbCircle
   0
 LWPOLYLINE
   5
-822
+84C
 330
 2F1
 100
@@ -3203,7 +3203,7 @@ AcDbPolyline
   0
 CIRCLE
   5
-823
+84D
 330
 2F1
 100
@@ -3225,7 +3225,7 @@ AcDbCircle
   0
 LINE
   5
-824
+84E
 330
 2F1
 100
@@ -3253,7 +3253,7 @@ AcDbLine
   0
 LINE
   5
-825
+84F
 330
 2F1
 100
@@ -3279,7 +3279,7 @@ AcDbLine
   0
 ATTDEF
   5
-826
+850
 330
 2F1
 100
@@ -3313,7 +3313,7 @@ CORRENTE
   0
 LINE
   5
-827
+851
 330
 2F1
 100
@@ -3339,7 +3339,7 @@ AcDbLine
   0
 LINE
   5
-828
+852
 330
 2F1
 100
@@ -3365,7 +3365,7 @@ AcDbLine
   0
 LINE
   5
-829
+853
 330
 2F1
 100
@@ -3377,13 +3377,13 @@ AcDbEntity
 100
 AcDbLine
  10
-109.987766790246
+109.9877667902459
  20
-29.93785917740701
+29.93785917740702
  30
 0.0
  11
-109.987766790246
+109.9877667902459
  21
 -0.062140822592994
  31
@@ -3391,7 +3391,7 @@ AcDbLine
   0
 LINE
   5
-82A
+854
 330
 2F1
 100
@@ -3419,7 +3419,7 @@ AcDbLine
   0
 LINE
   5
-82B
+855
 330
 2F1
 100
@@ -3445,7 +3445,7 @@ AcDbLine
   0
 LINE
   5
-82C
+856
 330
 2F1
 100
@@ -3473,7 +3473,7 @@ AcDbLine
   0
 LINE
   5
-82D
+857
 330
 2F1
 100
@@ -3501,7 +3501,7 @@ AcDbLine
   0
 LINE
   5
-82E
+858
 330
 2F1
 100
@@ -3529,7 +3529,7 @@ AcDbLine
   0
 LINE
   5
-82F
+859
 330
 2F1
 100
@@ -3557,7 +3557,7 @@ AcDbLine
   0
 ATTDEF
   5
-830
+85A
 330
 2F1
 100
@@ -3567,7 +3567,7 @@ AcDbEntity
 100
 AcDbText
  10
--94.41664973892443
+-94.41664973892445
  20
 23.84757326686986
  30
@@ -3575,13 +3575,13 @@ AcDbText
  40
 2.5
   1
-
+1- Circuito
 100
 AcDbAttributeDefinition
 280
      0
   3
-
+nome
   2
 nome
  70
@@ -3591,7 +3591,7 @@ nome
   0
 LINE
   5
-831
+85B
 330
 2F1
 100
@@ -3619,7 +3619,7 @@ AcDbLine
   0
 ATTDEF
   5
-832
+85C
 330
 2F1
 100
@@ -3637,13 +3637,13 @@ AcDbText
  40
 2.5
   1
-
+10 W
 100
 AcDbAttributeDefinition
 280
      0
   3
-
+Potência
   2
 Potência
  70
@@ -3653,7 +3653,7 @@ Potência
   0
 CIRCLE
   5
-833
+85D
 330
 2F1
 100
@@ -4443,7 +4443,7 @@ AcDbLine
  30
 0.0
  11
-109.987766790246
+109.9877667902459
  21
 30.00110029525877
  31
@@ -4461,7 +4461,7 @@ AcDbEntity
 100
 AcDbCircle
  10
-109.987766790246
+109.9877667902459
  20
 30.00110029525877
  30
@@ -4727,7 +4727,7 @@ EF
   3
 ACDB_RECOMPOSE_DATA
 350
-83E
+863
   3
 AcDbVariableDictionary
 350
@@ -4775,7 +4775,7 @@ AcDbDictionary
   0
 DICTIONARY
   5
-834
+85E
 330
 2F1
 100
@@ -4951,11 +4951,11 @@ AcDbXrecord
 280
      1
 300
-{E6B0793A-DF2B-F442-9FC6-82BDA96230B8}
+{E84076AF-E476-704F-AF07-005C995348D3}
 301
 {7B199ED4-A3DB-3A42-99C9-1624E005C874}
 302
-{E6B0793A-DF2B-F442-9FC6-82BDA96230B8}
+{E84076AF-E476-704F-AF07-005C995348D3}
 303
 C:\Users\User\Downloads\Trifi_Disjuntor_Mono.dxf
 301
@@ -5343,7 +5343,7 @@ X-Ray
   0
 XRECORD
   5
-83E
+863
 102
 {ACAD_REACTORS
 330
@@ -5511,7 +5511,7 @@ ACDBDETAILVIEWSTYLE
 102
 {ACAD_XDICTIONARY
 360
-841
+866
 102
 }
 102
@@ -6899,7 +6899,7 @@ ACDBSECTIONVIEWSTYLE
 102
 {ACAD_XDICTIONARY
 360
-83F
+864
 102
 }
 102
@@ -7408,8 +7408,6 @@ AcDbVisualStyle
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -7676,8 +7674,6 @@ Basic
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -7944,8 +7940,6 @@ Brighten
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -8214,8 +8208,6 @@ ColorChange
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -8482,8 +8474,6 @@ Conceptual
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -8750,8 +8740,6 @@ Dim
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -9018,8 +9006,6 @@ EdgeColorOff
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -9286,8 +9272,6 @@ Facepattern
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -9554,8 +9538,6 @@ Flat
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -9822,8 +9804,6 @@ FlatWithEdges
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -10090,8 +10070,6 @@ Gouraud
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -10358,8 +10336,6 @@ GouraudWithEdges
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -10626,8 +10602,6 @@ Hidden
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -10894,8 +10868,6 @@ JitterOff
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -11162,8 +11134,6 @@ Linepattern
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -11430,8 +11400,6 @@ OverhangOff
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -11698,8 +11666,6 @@ Realistic
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -11968,8 +11934,6 @@ Shaded
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -12236,8 +12200,6 @@ Shaded with edges
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -12504,8 +12466,6 @@ Shades of Gray
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -12772,8 +12732,6 @@ Sketchy
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -13040,8 +12998,6 @@ Thicken
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -13308,8 +13264,6 @@ Wireframe
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -13576,8 +13530,6 @@ X-Ray
      1
  62
     18
-420
-        0
 176
      1
  90
@@ -13853,7 +13805,7 @@ DictionaryVariables
   0
 DICTIONARY
   5
-841
+866
 330
 21C
 100
@@ -13865,7 +13817,7 @@ AcDbDictionary
   3
 ACAD_XREC_ROUNDTRIP
 360
-842
+867
   0
 DICTIONARY
   5
@@ -13945,7 +13897,7 @@ REFLECTIONTILE
   0
 DICTIONARY
   5
-83F
+864
 330
 21A
 100
@@ -13957,7 +13909,7 @@ AcDbDictionary
   3
 ACAD_XREC_ROUNDTRIP
 360
-840
+865
   0
 DICTIONARY
   5
@@ -13973,19 +13925,19 @@ AcDbDictionary
   3
 ACAD_ROUNDTRIP_2008_TABLESTYLE_CELLSTYLEMAP
 360
-83D
+862
   0
 XRECORD
   5
-842
+867
 102
 {ACAD_REACTORS
 330
-841
+866
 102
 }
 330
-841
+866
 100
 AcDbXrecord
 280
@@ -14417,15 +14369,15 @@ AcDbXrecord
   0
 XRECORD
   5
-840
+865
 102
 {ACAD_REACTORS
 330
-83F
+864
 102
 }
 330
-83F
+864
 100
 AcDbXrecord
 280
@@ -14441,7 +14393,7 @@ FLAGS
   0
 CELLSTYLEMAP
   5
-83D
+862
 102
 {ACAD_REACTORS
 330
