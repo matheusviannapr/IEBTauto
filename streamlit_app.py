@@ -920,14 +920,17 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
 
     return output_path
 
-def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_point, attributes):
+def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_point, attributes, target_doc=None):
     try:
+        if target_doc is None:
+            target_doc = doc
+            
         block_doc = ezdxf.readfile(block_filename)
         if block_name not in block_doc.blocks:
             raise ValueError(f"Block {block_name} not found in the file {block_filename}")
         block = block_doc.blocks.get(block_name)
-        if block_name not in doc.blocks:
-            new_block = doc.blocks.new(name=block_name)
+        if block_name not in target_doc.blocks:
+            new_block = target_doc.blocks.new(name=block_name)
             for entity in block:
                 new_block.add_entity(entity.copy())
         block_ref = msp.add_blockref(block_name, insert_point)
@@ -935,6 +938,145 @@ def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_poi
             block_ref.add_attrib(tag, value)
     except Exception as e:
         print(f"Error inserting block {block_name} from {block_filename}: {e}")
+
+def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
+    # Cria um novo documento DXF para o diagrama trifilar
+    doc_trifilar = ezdxf.new(dxfversion='R2010')
+    msp_trifilar = doc_trifilar.modelspace()
+    
+    # Agrupa os circuitos pelo quadro
+    if not isinstance(exemplos_circuitos, pd.DataFrame):
+        exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
+    quadros = exemplos_circuitos.groupby('Quadro')
+
+    x_offset = 0
+    y_offset = 0
+    y_offset_last = 50
+    
+    for nome_quadro, df_quadro in quadros:
+        # Adiciona um bloco para o quadro
+        y_offset -= 50  # Espaçamento entre o quadro e seus circuitos
+
+        df_trifilar = pd.DataFrame({
+            'num_fases': [circuito['num_fases'] for circuito in df_quadro.to_dict('records')],
+            'nome': [circuito['nome'] for circuito in df_quadro.to_dict('records')],
+            'potencia': [f"{circuito['potencia']} W" for circuito in df_quadro.to_dict('records')],
+            'Seção do Condutor (mm²)': [f"{circuito['Seção do Condutor (mm²)']} mm2" for circuito in df_quadro.to_dict('records')],
+            'Disjuntor (Ampere)': [f"{circuito['Disjuntor (Ampere)']} A" for circuito in df_quadro.to_dict('records')],
+            'Fases': [circuito['Fases'] for circuito in df_quadro.to_dict('records')],
+            'num_fases1': [circuito['num_fases1'] for circuito in df_quadro.to_dict('records')],
+            'DR': [circuito['DR'] for circuito in df_quadro.to_dict('records')]
+        })
+        
+        df_ordenado_trifilar = df_trifilar
+        quadro_min_x = float('inf')
+        quadro_min_y = float('inf')
+        quadro_max_x = float('-inf')
+        quadro_max_y = float('-inf')
+        
+        num_circuitos = len(df_ordenado_trifilar)
+        circuito_central_index = num_circuitos // 2
+        
+        for index, row in df_ordenado_trifilar.iterrows():
+            # Seleciona os blocos apropriados para o diagrama trifilar
+            if row['num_fases'] == 1 and row['num_fases1'] == "F+N+T":
+                disjuntor_filename = 'Trifi_Disjuntor_Mono.dxf'
+                disjuntor_block_name = 'Trifi_Disjuntor_Mono'
+                fios_filename = 'Trifi_Fios_Mono.dxf'
+                fios_block_name = 'Trifi_Fios_Mono'
+            elif row['num_fases'] == 1 and row['num_fases1'] == "F+N":
+                disjuntor_filename = 'Trifi_Disjuntor_Mono.dxf'
+                disjuntor_block_name = 'Trifi_Disjuntor_Mono'
+                fios_filename = 'Trifi_Fios_Mono2.dxf'
+                fios_block_name = 'Trifi_Fios_Mono2'
+            elif row['num_fases'] == 2:
+                disjuntor_filename = 'Trifi_Disjuntor_Bi.dxf'
+                disjuntor_block_name = 'Trifi_Disjuntor_Bi'
+                fios_filename = 'Trifi_Fios_Bi.dxf'
+                fios_block_name = 'Trifi_Fios_Bi'
+            elif row['num_fases'] == 3:
+                disjuntor_filename = 'Trifi_Disjuntor_Tri.dxf'
+                disjuntor_block_name = 'Trifi_Disjuntor_Tri'
+                fios_filename = 'Trifi_Fios_Tri.dxf'
+                fios_block_name = 'Trifi_Fios_Tri'
+                
+            disjuntor_attributes = {'corrente': str(row['Disjuntor (Ampere)'])}
+            fios_attributes = {
+                'seção': str(row['Seção do Condutor (mm²)']),
+                'Potência': str(row['potencia']),
+                'nome': row['nome'],
+                'fases': row['Fases']
+            }
+            
+            corrente_disjuntor = int(row['Disjuntor (Ampere)'].replace(' A', ''))
+            insert_point_disjuntor = (x_offset, y_offset)
+            
+            # Insere o bloco do disjuntor trifilar
+            insert_dxf_block_with_attributes(msp_trifilar, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes, doc_trifilar)
+            
+            # Verifica se tem DR e insere se necessário
+            if row['DR'] == True:
+                corrente_dr = selecionar_dr(corrente_disjuntor)
+                if corrente_dr:
+                    dr_filename = 'Trifi_DR.dxf'
+                    dr_block_name = 'Trifi_DR'
+                    dr_attributes = {'corrente': f'{str(corrente_dr)} A'} 
+                    insert_point_dr = (x_offset + 70, y_offset + 30)  # Ajusta a posição do DR
+                    insert_dxf_block_with_attributes(msp_trifilar, dr_filename, dr_block_name, insert_point_dr, dr_attributes, doc_trifilar)
+                    insert_point_fios = (x_offset + 80, y_offset + 30)  # Ajusta a posição dos fios após o DR
+            else:
+                insert_point_fios = (x_offset + 70, y_offset + 30)
+                
+            # Insere o bloco dos fios
+            insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, insert_point_fios, fios_attributes, doc_trifilar)
+
+            # Insere a entrada do quadro no circuito central
+            if index == circuito_central_index:
+                if fases_Q == 3:
+                    entrada_tri_attributes = {
+                        'CORRENTE': str(disjuntores_gerais[nome_quadro])
+                    }
+                    insert_point_entrada_tri = (x_offset, y_offset + 30)
+                    insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_tri.dxf', 'Trifi_entrada', insert_point_entrada_tri, entrada_tri_attributes, doc_trifilar)
+                elif fases_Q == 2:
+                    fios_bi_attributes = {
+                        'CORRENTE': str(disjuntores_gerais[nome_quadro])
+                    }
+                    insert_point_fios_bi = (x_offset, y_offset + 30)
+                    insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_bi.dxf', 'Trifi_entrada', insert_point_fios_bi, fios_bi_attributes, doc_trifilar)
+                elif fases_Q == 1:
+                    fios_mono_attributes = {
+                        'CORRENTE': str(disjuntores_gerais[nome_quadro])
+                    }
+                    insert_point_fios_mono = (x_offset, y_offset + 30)
+                    insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_mono.dxf', 'Trifi_entrada', insert_point_fios_mono, fios_mono_attributes, doc_trifilar)
+            
+            y_offset -= 30
+
+            quadro_min_x = -70
+            quadro_min_y = y_offset
+            quadro_max_x = 90
+            quadro_max_y = y_offset_last-30
+
+        y_offset_last = y_offset-30
+        # Adiciona o retângulo em torno do quadro
+        padding = 10
+        msp_trifilar.add_text(nome_quadro, dxfattribs={'height': 10}).set_placement((quadro_min_x-padding, quadro_max_y + 20), align=TextEntityAlignment.TOP_LEFT)
+
+        msp_trifilar.add_lwpolyline([
+            (quadro_min_x - padding, quadro_max_y + padding),
+            (quadro_max_x + padding, quadro_max_y + padding),
+            (quadro_max_x + padding, quadro_min_y - padding),
+            (quadro_min_x - padding, quadro_min_y - padding),
+            (quadro_min_x - padding, quadro_max_y + padding)
+        ], close=True)
+
+        y_offset -= 70  # Espaçamento entre diferentes quadros
+
+    output_path = 'diagrama_trifilar_ajustado.dxf'
+    doc_trifilar.saveas(output_path)
+
+    return output_path
 
 def reordenar_colunas(df):
     ordem_colunas = ['Potência', 'tensão', 'fator_potencia', 'num_fases', 'temperatura', 'num_circuitos', 'comprimento', 'queda_tensao_max_admitida', 'Quadro', 'met_instala']
@@ -1312,12 +1454,15 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             ))
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
-            output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
-            st.success(f"Diagrama salvo em {output_path}")
+            output_path_unifilar = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
+            output_path_trifilar = gerar_diagrama_trifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
+            st.success(f"Diagramas salvos em {output_path_unifilar} e {output_path_trifilar}")
             st.success(f"Memorial de Cálculo salvo em memcalc.tex")
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
+                st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path_unifilar, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
+            with col2:
+                st.download_button(label="Baixar Diagrama Trifilar", data=open(output_path_trifilar, "rb").read(), file_name='diagrama_trifilar_ajustado.dxf')
             caminho_arquivo = 'memcalc'  # Caminho completo do arquivo latex ser gerado
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
