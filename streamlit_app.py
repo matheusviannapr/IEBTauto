@@ -978,6 +978,23 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
         num_circuitos = len(df_ordenado_trifilar)
         circuito_central_index = num_circuitos // 2
         
+        # Pré-calcular os offsets verticais para cada circuito com base no próximo circuito
+        vertical_offsets = []
+        for i, row in df_ordenado_trifilar.iterrows():
+            # Para o último circuito, usamos seu próprio offset
+            if i == len(df_ordenado_trifilar) - 1:
+                if row['num_fases'] == 3:
+                    vertical_offsets.append(60)  # Offset para trifásico
+                else:
+                    vertical_offsets.append(40)  # Offset para mono/bifásico
+            else:
+                # Para os demais circuitos, usamos o offset do próximo
+                next_row = df_ordenado_trifilar.iloc[i+1]
+                if next_row['num_fases'] == 3:
+                    vertical_offsets.append(60)  # Offset para trifásico
+                else:
+                    vertical_offsets.append(40)  # Offset para mono/bifásico
+        
         for index, row in df_ordenado_trifilar.iterrows():
             # Seleciona os blocos apropriados para o diagrama trifilar com base no número de fases e nas fases específicas
             fases = row['Fases']
@@ -986,15 +1003,12 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
             if row['num_fases'] == 1:
                 disjuntor_filename = 'Trifi_Disjuntor_Mono.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Mono'
-                vertical_offset = 40  # Offset vertical para monofásico
             elif row['num_fases'] == 2:
                 disjuntor_filename = 'Trifi_Disjuntor_Bi.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Bi'
-                vertical_offset = 40  # Offset vertical para bifásico
             elif row['num_fases'] == 3:
                 disjuntor_filename = 'Trifi_Disjuntor_Tri.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Tri'
-                vertical_offset = 60  # Offset vertical para trifásico
             
             # Seleciona os blocos de fios com base nas fases específicas
             if row['num_fases'] == 1:
@@ -1115,8 +1129,8 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                     insert_point_fios_mono = (x_offset, y_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_mono.dxf', 'Trifi_entrada', insert_point_fios_mono, fios_mono_attributes, doc_trifilar)
             
-            # Usa o valor de vertical_offset para determinar o espaçamento vertical entre os circuitos
-            y_offset -= vertical_offset
+            # Usa o valor pré-calculado de vertical_offset para determinar o espaçamento vertical entre os circuitos
+            y_offset -= vertical_offsets[index]
 
             quadro_min_x = -70
             quadro_min_y = y_offset
