@@ -1042,7 +1042,7 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                 fios_block_name = 'Trifi_Fios_Tri'
                 
             # Sempre usar o arquivo Trifi_Disjuntor_Bi.dxf que contém todos os blocos R, S, T
-            fios_filename = 'Trifi_Disjuntor_Bi.dxf'
+            fios_filename = 'Trifi_Disjuntor_Mono.dxf'
                 
             disjuntor_attributes = {
                 'corrente': str(row['Disjuntor (Ampere)']),
