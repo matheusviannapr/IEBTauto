@@ -849,7 +849,11 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
                 disjuntor_block_name = 'Disjuntor_Tri'
                 fios_filename = 'fios_tri.dxf'
                 fios_block_name = 'Fios_Tri'
-            disjuntor_attributes = {'corrente': str(row['Disjuntor (Ampere)'])}
+            disjuntor_attributes = {
+                'corrente': str(row['Disjuntor (Ampere)']),
+                'nome': row['nome'],
+                'Potência': str(row['potencia'])
+            }
             fios_attributes = {
                 'seção': str(row['Seção do Condutor (mm²)']),
                 'Potência': str(row['potencia']),
@@ -1043,7 +1047,11 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
             # Sempre usar o arquivo Trifi_Disjuntor_Bi.dxf que contém todos os blocos R, S, T
             fios_filename = 'Trifi_Disjuntor_Bi.dxf'
                 
-            disjuntor_attributes = {'corrente': str(row['Disjuntor (Ampere)'])}
+            disjuntor_attributes = {
+                'corrente': str(row['Disjuntor (Ampere)']),
+                'nome': row['nome'],
+                'Potência': str(row['potencia'])
+            }
             fios_attributes = {
                 'seção': str(row['Seção do Condutor (mm²)']),
                 'Potência': str(row['potencia']),
