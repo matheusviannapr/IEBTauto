@@ -1077,14 +1077,21 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                 # Para circuitos bifásicos RS ou ST, inserir dois blocos monopolares
                 # Primeiro bloco - fase 1 (S)
                 mono_block_name = f'Trifi-{special_fase1}-Monopolar'
-                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, mono_block_name, insert_point_fios, fios_attributes, doc_trifilar)
+                # Adicionar offset de 10 unidades para blocos monopolares
+                monopolar_insert_point = (insert_point_fios[0], insert_point_fios[1] + 10)
+                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, mono_block_name, monopolar_insert_point, fios_attributes, doc_trifilar)
                 
                 # Segundo bloco - fase 2 (R ou T)
                 bipolar_block_name = f'Trifi-{special_fase2}-Bipolar'
                 insert_dxf_block_with_attributes(msp_trifilar, fios_filename, bipolar_block_name, insert_point_fios, fios_attributes, doc_trifilar)
             else:
                 # Para outros casos, inserir o bloco normalmente
-                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, insert_point_fios, fios_attributes, doc_trifilar)
+                # Adicionar offset de 10 unidades para blocos monopolares
+                if 'Monopolar' in fios_block_name:
+                    monopolar_insert_point = (insert_point_fios[0], insert_point_fios[1] + 10)
+                    insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, monopolar_insert_point, fios_attributes, doc_trifilar)
+                else:
+                    insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, insert_point_fios, fios_attributes, doc_trifilar)
 
             # Insere a entrada do quadro no circuito central
             if index == circuito_central_index:
