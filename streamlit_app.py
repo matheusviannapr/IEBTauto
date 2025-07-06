@@ -986,15 +986,15 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
             if row['num_fases'] == 1:
                 disjuntor_filename = 'Trifi_Disjuntor_Mono.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Mono'
-                vertical_offset = 30  # Offset vertical para monofásico
+                vertical_offset = 40  # Offset vertical para monofásico
             elif row['num_fases'] == 2:
                 disjuntor_filename = 'Trifi_Disjuntor_Bi.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Bi'
-                vertical_offset = 30  # Offset vertical para bifásico
+                vertical_offset = 40  # Offset vertical para bifásico
             elif row['num_fases'] == 3:
                 disjuntor_filename = 'Trifi_Disjuntor_Tri.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Tri'
-                vertical_offset = 50  # Offset vertical para trifásico
+                vertical_offset = 60  # Offset vertical para trifásico
             
             # Seleciona os blocos de fios com base nas fases específicas
             if row['num_fases'] == 1:
