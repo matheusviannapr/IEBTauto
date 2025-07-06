@@ -1066,9 +1066,9 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                     dr_attributes = {'corrente': f'{str(corrente_dr)} A'} 
                     insert_point_dr = (x_offset + 70, y_offset + vertical_offset)  # Ajusta a posição do DR com base no offset vertical
                     insert_dxf_block_with_attributes(msp_trifilar, dr_filename, dr_block_name, insert_point_dr, dr_attributes, doc_trifilar)
-                    insert_point_fios = (x_offset + 80, y_offset + vertical_offset)  # Ajusta a posição dos fios após o DR
+                    insert_point_fios = (x_offset, y_offset + vertical_offset)  # Ajusta a posição dos fios após o DR
             else:
-                insert_point_fios = (x_offset + 70, y_offset + vertical_offset)  # Usa o offset vertical específico
+                insert_point_fios = (x_offset, y_offset + vertical_offset)  # Usa o offset vertical específico
                 
             # Insere o bloco dos fios
             if row['num_fases'] == 2 and special_bifasico:
