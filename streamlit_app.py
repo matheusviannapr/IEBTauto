@@ -1181,6 +1181,21 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             df_selecionado = resultados_circuitos[['Nome do Circuito', 'Seção do Condutor (mm²)', 'Disjuntor','Comprimento','Número de fases','Tipo de alimentação']]
             df_selecionado['Quantidade de condutor fase'] = df_selecionado['Comprimento'] * df_selecionado['Número de fases']*1000
             # Adicionar coluna para "Seção do Condutor Neutro" com regra de s <= 25
+            # Definindo o mapeamento de seções do condutor neutro conforme NBR 5410
+            seção_neutro_map = {
+                35: 25,
+                50: 25,
+                70: 35,
+                95: 50,
+                120: 70,
+                150: 70,
+                185: 95,
+                240: 120,
+                300: 150,
+                400: 185
+            }
+            
+            # Aplicando a regra de dimensionamento do condutor neutro
             df_selecionado['Seção do Condutor Neutro (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 25 else seção_neutro_map.get(x, x)
             )
