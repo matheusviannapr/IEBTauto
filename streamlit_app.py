@@ -852,14 +852,11 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
             disjuntor_attributes = {
                 'corrente': str(row['Disjuntor (Ampere)']),
                 'nome': row['nome'],
-                'Potência': str(row['potencia'])
-            }
-            fios_attributes = {
-                'seção': str(row['Seção do Condutor (mm²)']),
                 'Potência': str(row['potencia']),
-                'nome': row['nome'],
-                'fases': row['Fases']
+                'seção': str(row['Seção do Condutor (mm²)'])
             }
+            fios_attributes = {}
+            # Os blocos de fios não devem ter nenhum atributo
             corrente_disjuntor = int(row['Disjuntor (Ampere)'].replace(' A', ''))
             insert_point_disjuntor = (x_offset, y_offset)
             insert_dxf_block_with_attributes(msp, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes)
@@ -1050,14 +1047,11 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
             disjuntor_attributes = {
                 'corrente': str(row['Disjuntor (Ampere)']),
                 'nome': row['nome'],
-                'Potência': str(row['potencia'])
-            }
-            fios_attributes = {
-                'seção': str(row['Seção do Condutor (mm²)']),
                 'Potência': str(row['potencia']),
-                'nome': row['nome'],
-                'fases': row['Fases']
+                'seção': str(row['Seção do Condutor (mm²)'])
             }
+            fios_attributes = {}
+            # Os blocos de fios não devem ter nenhum atributo
             
             corrente_disjuntor = int(row['Disjuntor (Ampere)'].replace(' A', ''))
             insert_point_disjuntor = (x_offset, y_offset)
