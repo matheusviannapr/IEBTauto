@@ -978,27 +978,70 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
         circuito_central_index = num_circuitos // 2
         
         for index, row in df_ordenado_trifilar.iterrows():
-            # Seleciona os blocos apropriados para o diagrama trifilar
-            if row['num_fases'] == 1 and row['num_fases1'] == "F+N+T":
+            # Seleciona os blocos apropriados para o diagrama trifilar com base no número de fases e nas fases específicas
+            fases = row['Fases']
+            
+            # Determina o tipo de disjuntor com base no número de fases
+            if row['num_fases'] == 1:
                 disjuntor_filename = 'Trifi_Disjuntor_Mono.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Mono'
-                fios_filename = 'Trifi_Fios_Mono.dxf'
-                fios_block_name = 'Trifi_Fios_Mono'
-            elif row['num_fases'] == 1 and row['num_fases1'] == "F+N":
-                disjuntor_filename = 'Trifi_Disjuntor_Mono.dxf'
-                disjuntor_block_name = 'Trifi_Disjuntor_Mono'
-                fios_filename = 'Trifi_Fios_Mono2.dxf'
-                fios_block_name = 'Trifi_Fios_Mono2'
+                vertical_offset = 30  # Offset vertical para monofásico
             elif row['num_fases'] == 2:
                 disjuntor_filename = 'Trifi_Disjuntor_Bi.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Bi'
-                fios_filename = 'Trifi_Fios_Bi.dxf'
-                fios_block_name = 'Trifi_Fios_Bi'
+                vertical_offset = 30  # Offset vertical para bifásico
             elif row['num_fases'] == 3:
                 disjuntor_filename = 'Trifi_Disjuntor_Tri.dxf'
                 disjuntor_block_name = 'Trifi_Disjuntor_Tri'
+                vertical_offset = 50  # Offset vertical para trifásico
+            
+            # Seleciona os blocos de fios com base nas fases específicas
+            if row['num_fases'] == 1:
+                if 'R' in fases:
+                    if row['num_fases1'] == "F+N+T":
+                        fios_filename = 'Trifi-R-Monopolar.dxf'
+                        fios_block_name = 'Trifi-R-Monopolar'
+                    else:  # F+N
+                        fios_filename = 'Trifi-R-Monopolar2.dxf'
+                        fios_block_name = 'Trifi-R-Monopolar2'
+                elif 'S' in fases:
+                    if row['num_fases1'] == "F+N+T":
+                        fios_filename = 'Trifi-S-Monopolar.dxf'
+                        fios_block_name = 'Trifi-S-Monopolar'
+                    else:  # F+N
+                        fios_filename = 'Trifi-S-Monopolar2.dxf'
+                        fios_block_name = 'Trifi-S-Monopolar2'
+                elif 'T' in fases:
+                    if row['num_fases1'] == "F+N+T":
+                        fios_filename = 'Trifi-T-Monopolar.dxf'
+                        fios_block_name = 'Trifi-T-Monopolar'
+                    else:  # F+N
+                        fios_filename = 'Trifi-T-Monopolar2.dxf'
+                        fios_block_name = 'Trifi-T-Monopolar2'
+            elif row['num_fases'] == 2:
+                # Definir flag para tratamento especial de RS e ST
+                special_bifasico = False
+                
+                # Verificar a string de fases como um todo
+                if fases == 'RS' or fases == 'SR':
+                    # Para RS, vamos usar tratamento especial
+                    special_bifasico = True
+                    special_fase1 = 'S'
+                    special_fase2 = 'R'
+                elif fases == 'RT' or fases == 'TR':
+                    fios_filename = 'Trifi-RT-Bipolar.dxf'
+                    fios_block_name = 'Trifi-RT-Bipolar'
+                elif fases == 'ST' or fases == 'TS':
+                    # Para ST, vamos usar tratamento especial
+                    special_bifasico = True
+                    special_fase1 = 'S'
+                    special_fase2 = 'T'
+            elif row['num_fases'] == 3:
                 fios_filename = 'Trifi_Fios_Tri.dxf'
                 fios_block_name = 'Trifi_Fios_Tri'
+                
+            # Sempre usar o arquivo Trifi_Disjuntor_Bi.dxf que contém todos os blocos R, S, T
+            fios_filename = 'Trifi_Disjuntor_Bi.dxf'
                 
             disjuntor_attributes = {'corrente': str(row['Disjuntor (Ampere)'])}
             fios_attributes = {
@@ -1021,34 +1064,48 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                     dr_filename = 'Trifi_DR.dxf'
                     dr_block_name = 'Trifi_DR'
                     dr_attributes = {'corrente': f'{str(corrente_dr)} A'} 
-                    insert_point_dr = (x_offset + 70, y_offset + 30)  # Ajusta a posição do DR
+                    insert_point_dr = (x_offset + 70, y_offset + vertical_offset)  # Ajusta a posição do DR com base no offset vertical
                     insert_dxf_block_with_attributes(msp_trifilar, dr_filename, dr_block_name, insert_point_dr, dr_attributes, doc_trifilar)
-                    insert_point_fios = (x_offset + 80, y_offset + 30)  # Ajusta a posição dos fios após o DR
+                    insert_point_fios = (x_offset + 80, y_offset + vertical_offset)  # Ajusta a posição dos fios após o DR
             else:
-                insert_point_fios = (x_offset + 70, y_offset + 30)
+                insert_point_fios = (x_offset + 70, y_offset + vertical_offset)  # Usa o offset vertical específico
                 
             # Insere o bloco dos fios
-            insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, insert_point_fios, fios_attributes, doc_trifilar)
+            if row['num_fases'] == 2 and special_bifasico:
+                # Para circuitos bifásicos RS ou ST, inserir dois blocos monopolares
+                # Primeiro bloco - fase 1 (S)
+                mono_block_name = f'Trifi-{special_fase1}-Monopolar'
+                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, mono_block_name, insert_point_fios, fios_attributes, doc_trifilar)
+                
+                # Segundo bloco - fase 2 (R ou T)
+                bipolar_block_name = f'Trifi-{special_fase2}-Bipolar'
+                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, bipolar_block_name, insert_point_fios, fios_attributes, doc_trifilar)
+            else:
+                # Para outros casos, inserir o bloco normalmente
+                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, insert_point_fios, fios_attributes, doc_trifilar)
 
             # Insere a entrada do quadro no circuito central
             if index == circuito_central_index:
+                # Define o offset vertical para a entrada do quadro com base no número de fases
+                entrada_offset = 50 if fases_Q == 3 else 30
+                
                 if fases_Q == 3:
                     entrada_tri_attributes = {
                         'CORRENTE': str(disjuntores_gerais[nome_quadro])
                     }
-                    insert_point_entrada_tri = (x_offset, y_offset + 30)
+                    insert_point_entrada_tri = (x_offset, y_offset + entrada_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_tri.dxf', 'Trifi_entrada', insert_point_entrada_tri, entrada_tri_attributes, doc_trifilar)
                 elif fases_Q == 2:
                     fios_bi_attributes = {
                         'CORRENTE': str(disjuntores_gerais[nome_quadro])
                     }
-                    insert_point_fios_bi = (x_offset, y_offset + 30)
+                    insert_point_fios_bi = (x_offset, y_offset + entrada_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_bi.dxf', 'Trifi_entrada', insert_point_fios_bi, fios_bi_attributes, doc_trifilar)
                 elif fases_Q == 1:
                     fios_mono_attributes = {
                         'CORRENTE': str(disjuntores_gerais[nome_quadro])
                     }
-                    insert_point_fios_mono = (x_offset, y_offset + 30)
+                    insert_point_fios_mono = (x_offset, y_offset + entrada_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_mono.dxf', 'Trifi_entrada', insert_point_fios_mono, fios_mono_attributes, doc_trifilar)
             
             y_offset -= 30
