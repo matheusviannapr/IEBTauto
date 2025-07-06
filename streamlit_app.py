@@ -1160,7 +1160,15 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
             print(exemplos_circuitos)
             for circuito in exemplos_circuitos:
-                circuito['comprimento'] = circuito['comprimento'] / 1000 
+                try:
+                    if 'comprimento' in circuito and isinstance(circuito['comprimento'], (int, float)):
+                        circuito['comprimento'] = circuito['comprimento'] / 1000
+                    else:
+                        st.error(f"Erro: O campo 'comprimento' está ausente ou inválido no circuito {circuito.get('nome', 'desconhecido')}")
+                        circuito['comprimento'] = 0  # Valor padrão para evitar erros subsequentes
+                except Exception as e:
+                    st.error(f"Erro ao processar o comprimento do circuito {circuito.get('nome', 'desconhecido')}: {str(e)}")
+                    circuito['comprimento'] = 0  # Valor padrão para evitar erros subsequentes
                 circuito['queda_tensao_max_admitida'] = 0.05 * circuito['tensao']
             resultados_circuitos, exemplos_circuitos = calcular_parametros_circuitos(exemplos_circuitos, data_tables)
             st.subheader('Resultados dos Circuitos')
