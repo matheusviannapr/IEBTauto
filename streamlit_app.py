@@ -1117,7 +1117,7 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
             quadro_max_x = 90
             quadro_max_y = y_offset_last-30
 
-        y_offset_last = y_offset-30
+        y_offset_last = y_offset-40
         # Adiciona o retângulo em torno do quadro
         padding = 10
         msp_trifilar.add_text(nome_quadro, dxfattribs={'height': 10}).set_placement((quadro_min_x-padding, quadro_max_y + 20), align=TextEntityAlignment.TOP_LEFT)
