@@ -57,7 +57,7 @@ def encontrar_capacidade_corrente(secao_condutor, tabela_capacidade, metodo_inst
 
 def determinar_disjuntor(corrente_corrigida, secao_final, tabela_disjuntores, tabela_capacidade, metodo_instalacao, numero_fases):
     capacidade_condutor = encontrar_capacidade_corrente(secao_final, tabela_capacidade, metodo_instalacao)
-    
+
     # Definindo o tipo de disjuntor baseado no número de fases
     if numero_fases == 1:
         tipo_disjuntor = 'Monopolar'
@@ -67,18 +67,18 @@ def determinar_disjuntor(corrente_corrigida, secao_final, tabela_disjuntores, ta
         tipo_disjuntor = 'Tripolar'
     else:
         raise ValueError("Número de fases inválido. Deve ser 1, 2 ou 3.")
-    
+
     # Filtrando a tabela de disjuntores de acordo com o tipo
     tabela_disjuntores_filtrada = tabela_disjuntores[tabela_disjuntores['Tipo de disjuntor'] == tipo_disjuntor]
-    
+
     # Ordenando a tabela filtrada pela corrente nominal
     tabela_disjuntores_ordenada = tabela_disjuntores_filtrada.sort_values(by='Corrente nominal')
-    
+
     # Iterando pela tabela ordenada para encontrar o disjuntor adequado
     for index, disjuntor in tabela_disjuntores_ordenada.iterrows():
         if corrente_corrigida < disjuntor['Corrente nominal'] < capacidade_condutor:
             return disjuntor['Corrente nominal']
-    
+
     # Caso não encontre um disjuntor adequado
     return None
 
@@ -105,33 +105,6 @@ def ajustar_condutor_queda_tensao(corrente_nominal, comprimento, secao_inicial, 
 
 def calcular_parametros_circuitos(lista_circuitos, data_tables):
     resultados = []
-    fases_qd = 3  # Assumindo sistema trifásico por padrão
-    
-    # Distribuir as fases antes de calcular os parâmetros
-    lista_circuitos, carga_fase = distribuir_fases(lista_circuitos, fases_qd)
-    
-    # Criar e exibir a tabela de balanceamento
-    st.subheader('Verificação do Balanceamento de Cargas')
-    df_balanceamento = criar_tabela_balanceamento(lista_circuitos, carga_fase)
-    
-    # Aplicar estilo à tabela
-    def highlight_cells(val):
-        if isinstance(val, (int, float)):
-            return 'background-color: #E8F5E9'
-        return ''
-    
-    # Exibir a tabela com estilo
-    st.dataframe(
-        df_balanceamento.style
-        .applymap(highlight_cells)
-        .format({
-            'Fase R': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x,
-            'Fase S': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x,
-            'Fase T': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x,
-            'Carga/Circuito': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x
-        })
-    )
-    
     for circuito in lista_circuitos:
         corrente_nominal = calcular_corrente_nominal(circuito['potencia'], circuito['tensao'], circuito['fator_potencia'], circuito['num_fases'])
         fator_correcao_temp = encontrar_fator_correcao(circuito['temperatura'], data_tables['Fator de correção de temperatur'])
@@ -198,11 +171,11 @@ def calcular_disjuntor_qgbt(disjuntores_gerais, tabela_fator_demanda_qgbt, tensa
 
 def distribuir_fases(circuitos, fases_qd):
     carga_fase = {'R': 0, 'S': 0, 'T': 0}
-    
+
     for circuito in circuitos:
         num_fases = circuito['num_fases']
         potencia = circuito['potencia']
-        
+
         if fases_qd == 3:
             if num_fases == 1:
                 fase = min(carga_fase, key=carga_fase.get)
@@ -218,7 +191,7 @@ def distribuir_fases(circuitos, fases_qd):
                 carga_fase['S'] += potencia / 3
                 carga_fase['T'] += potencia / 3
                 circuito['Fases'] = 'RST'
-        
+
         elif fases_qd == 2:
             if num_fases == 1:
                 fase = min(['R', 'S'], key=lambda f: carga_fase[f])
@@ -228,85 +201,15 @@ def distribuir_fases(circuitos, fases_qd):
                 carga_fase['R'] += potencia / 2
                 carga_fase['S'] += potencia / 2
                 circuito['Fases'] = 'RS'
-        
+
         elif fases_qd == 1:
             if num_fases == 1:
                 carga_fase['R'] += potencia
                 circuito['Fases'] = 'R'
             else:
                 st.warning('Existem circuitos que necessitam de mais de uma fase, reveja a Configuração da Alimentação Geral', icon="⚠️")
-    
-    return circuitos, carga_fase
 
-def criar_tabela_balanceamento(circuitos, carga_fase):
-    # Criar DataFrame para a tabela de balanceamento
-    data = []
-    total_potencia = 0
-    
-    # Adicionar circuitos à tabela
-    for i, circuito in enumerate(circuitos, 1):
-        row = {
-            'Circuitos': i,
-            'Fase R': '',
-            'Fase S': '',
-            'Fase T': '',
-            'Carga/Circuito': circuito['potencia']
-        }
-        
-        # Distribuir potência nas fases
-        if 'R' in circuito['Fases']:
-            if len(circuito['Fases']) == 1:
-                row['Fase R'] = circuito['potencia']
-            elif len(circuito['Fases']) == 2:
-                row['Fase R'] = circuito['potencia'] / 2
-            else:  # Trifásico
-                row['Fase R'] = circuito['potencia'] / 3
-        
-        if 'S' in circuito['Fases']:
-            if len(circuito['Fases']) == 1:
-                row['Fase S'] = circuito['potencia']
-            elif len(circuito['Fases']) == 2:
-                row['Fase S'] = circuito['potencia'] / 2
-            else:  # Trifásico
-                row['Fase S'] = circuito['potencia'] / 3
-        
-        if 'T' in circuito['Fases']:
-            if len(circuito['Fases']) == 1:
-                row['Fase T'] = circuito['potencia']
-            elif len(circuito['Fases']) == 2:
-                row['Fase T'] = circuito['potencia'] / 2
-            else:  # Trifásico
-                row['Fase T'] = circuito['potencia'] / 3
-        
-        total_potencia += circuito['potencia']
-        data.append(row)
-    
-    # Criar DataFrame
-    df = pd.DataFrame(data)
-    
-    # Adicionar linha de totais
-    total_row = {
-        'Circuitos': 'Carga Total:',
-        'Fase R': carga_fase['R'],
-        'Fase S': carga_fase['S'],
-        'Fase T': carga_fase['T'],
-        'Carga/Circuito': total_potencia
-    }
-    df = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
-    
-    # Adicionar linha de percentuais
-    total_carga = sum(carga_fase.values())
-    if total_carga > 0:
-        percentual_row = {
-            'Circuitos': 'Percentual:',
-            'Fase R': f"{(carga_fase['R'] / total_carga * 100):.1f}%",
-            'Fase S': f"{(carga_fase['S'] / total_carga * 100):.1f}%",
-            'Fase T': f"{(carga_fase['T'] / total_carga * 100):.1f}%",
-            'Carga/Circuito': ''
-        }
-        df = pd.concat([df, pd.DataFrame([percentual_row])], ignore_index=True)
-    
-    return df
+    return circuitos
 
 
 def encontrar_disjuntor_menor(corrente, tabela_disjuntores):
@@ -447,6 +350,7 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         quadro = circuito['Quadro']
 
         n_factor = '0' if num_fases == 1 else '1' if num_fases == 2 else '2'
+        latex_content += f"\\subsection*{{Circuito: {nome}}}\n"
         latex_content += f"\\subsection*{{Circuito: {nome} - {quadro} }}\n"
         latex_content += "\\begin{itemize}\n"
         latex_content += f"    \\item \\textbf{{Dados do Circuito:}} Potência = {potencia}W, Tensão = {tensao}V, Fator de Potência = {fator_potencia}, Número de Fases = {num_fases}.\n"
@@ -470,7 +374,7 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
 
 def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_gerais, disjuntor_qgbt, data_tables):
     doc = Document(documentclass='article', document_options='11pt')
-    
+
     # Adiciona os pacotes necessários
     doc.packages.append(Package('makeidx'))
     doc.packages.append(Package('multirow'))
@@ -485,11 +389,11 @@ def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_ger
     doc.packages.append(Package('amssymb'))
     doc.packages.append(Package('pdflscape'))
     doc.packages.append(Package('geometry', options='paperwidth=595pt,paperheight=841pt,top=23pt,right=56pt,bottom=56pt,left=56pt'))
-    
+
     # Adiciona o autor e título
     doc.preamble.append(Command('author', 'CHRISTINE CACERES BURGHART'))
     doc.preamble.append(Command('title', ''))
-    
+
     # Adiciona o novo ambiente de indentação
     doc.preamble.append(NoEscape(r"""
     \makeatletter
@@ -501,20 +405,20 @@ def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_ger
     \parshape 1\@totalleftmargin \linewidth\ignorespaces}{\par}%
     \makeatother
     """))
-    
+
     # Adiciona o início do documento
     doc.append(NoEscape(r'\begin{document}'))
     doc.append(NoEscape(r'\begin{center}'))
     doc.append(NoEscape(r'\large \textbf{OBJETO:} Memorial de dimensionamento para os circuitos do NOMEDOPROJETO'))
     doc.append(NoEscape(r'\end{center}'))
-    
+
     # Adiciona seções ao documento
     with doc.create(Section('Introdução')):
         doc.append('Este documento descreve o procedimento técnico detalhado para o dimensionamento de condutores e disjuntores em circuitos elétricos residenciais, baseando-se nas normas técnicas ABNT NBR 5410 e ABNT NBR 5471. A metodologia aborda a determinação da seção transversal dos condutores e a escolha de disjuntores, levando em consideração critérios como capacidade de condução de corrente, queda de tensão, e proteção contra sobrecarga e curto-circuito.')
-    
+
     with doc.create(Section('Metodologia e Normas Aplicadas')):
         doc.append('O dimensionamento dos condutores elétricos segue as diretrizes estabelecidas pelas normas ABNT NBR 5410 e ABNT NBR 5471, que definem os padrões para instalações elétricas de baixa tensão e para condutores de energia elétrica, respectivamente.')
-    
+
     with doc.create(Section('Cálculos e Resultados')):
         with doc.create(Subsection('Cálculo da Corrente Nominal do Circuito')):
             doc.append(NoEscape(r'A corrente nominal (\(I_{\text{nominal}}\)) é calculada pela fórmula:'))
@@ -522,18 +426,18 @@ def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_ger
             doc.append(NoEscape(r'para circuitos trifásicos, e'))
             doc.append(NoEscape(r'\[ I_{\text{nominal}} = \frac{P}{V \cdot \cos(\phi)} \]'))
             doc.append(NoEscape(r'para circuitos monofásicos, onde \(P\) é a potência, \(V\) a tensão e \(\cos(\phi)\) o fator de potência.'))
-        
+
         with doc.create(Subsection('Cálculo da Corrente Corrigida')):
             doc.append(NoEscape(r'A corrente corrigida (\(I_{\text{corrigida}}\)) considera os fatores de temperatura e agrupamento:'))
             doc.append(NoEscape(r'\[ I_{\text{corrigida}} = \frac{I_{\text{nominal}}}{\text{Fator\_Temperatura} \times \text{Fator\_Agrupamento}} \]'))
-        
+
         with doc.create(Subsection('Seleção do Condutor')):
             doc.append('A seleção do condutor é realizada garantindo que sua capacidade de corrente seja maior que \( I_{\text{corrigida}} \). A seção mínima é determinada pelo método de instalação e as especificações da norma ABNT NBR 5410.')
-        
+
         with doc.create(Subsection('Cálculo da Queda de Tensão')):
             doc.append('A queda de tensão é calculada considerando a resistência e a reatância do condutor, bem como a distância do circuito:')
             doc.append(NoEscape(r'\[ \Delta V =  {I_{\text{nominal}} \times \text{comprimento} \times \text{V/A.km} \]'))
-        
+
         with doc.create(Subsection('Escolha do Disjuntor')):
             doc.append(NoEscape(r'O disjuntor é selecionado assegurando que \( I_{\text{corrigida}} < \) I_{\text{disjuntor}} \( < \) Capacidade de corrente do condutor.'))
 
@@ -701,7 +605,7 @@ def compile_tex_online(tex_content):
         return response.content  # Retornando o conteúdo do PDF gerado
     else:
         return None
-    
+
 def selecionar_dr(corrente_disjuntor):
     # Lista de correntes nominais dos DRs
     correntes_dr = [25, 40, 63, 80]
@@ -728,13 +632,13 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
     if not isinstance(exemplos_circuitos, pd.DataFrame):
         exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
     quadros = exemplos_circuitos.groupby('Quadro')
-    
+
     x_offset = 0
     y_offset = 0
     y_offset_last=50
     for nome_quadro, df_quadro in quadros:
         # Adiciona um bloco para o quadro
-        
+
         y_offset -= 50  # Espaçamento entre o quadro e seus circuitos
 
         df_unifilar = pd.DataFrame({
@@ -819,14 +723,14 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
                  insert_point_fios_mono = (x_offset, y_offset + 30)
                  insert_dxf_block_with_attributes(msp, 'entrada_mono.dxf', 'entrada', insert_point_fios_mono, fios_mono_attributes)
             y_offset -= 30
-            
+
 
             quadro_min_x = -70
             quadro_min_y = y_offset
             quadro_max_x = 90
             quadro_max_y = y_offset_last-30
-    
-            
+
+
         y_offset_last=y_offset-30
         # Adiciona o retângulo em torno do quadro
         padding = 10
@@ -843,7 +747,7 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
 
     output_path = 'diagrama_unifilar_ajustado.dxf'
     doc.saveas(output_path)
-    
+
     return output_path
 
 def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_point, attributes):
@@ -1120,7 +1024,7 @@ def calcular_custo_totaldisj(df, sinapi_df1):
     df_agrupado['Custo Unitário'] = df_agrupado['Codigo'].map(custo_dict)
     # Agrupar por código e calcular a quantidade total e custo total
     df_agrupado['Custo Total'] = df_agrupado['Quantidade'] * df_agrupado['Custo Unitário']
-    
+
     return df_agrupado
 
 def escolher_quadro(circuitos, sinapi_quadros):
@@ -1133,18 +1037,18 @@ def calcular_custo_totalquadros(df, sinapi_df1):
     # Criar um dicionário para mapeamento
     custo_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['CUSTO TOTAL'].to_dict()
     nome_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['DESCRICAO DA COMPOSICAO'].to_dict()
-    
+
     # Mapear os custos totais e descrições para cada código no DataFrame df
     df['Descrição da Composição'] = df['Codigo'].map(nome_dict)
     df['Custo Unitário'] = df['Codigo'].map(custo_dict)
-    
+
     # Agrupar por código e calcular a quantidade total e custo total
     df_agrupado = df['Codigo'].value_counts().reset_index()
     df_agrupado.columns = ['Codigo', 'Quantidade']
     df_agrupado['Descrição da Composição'] = df_agrupado['Codigo'].map(nome_dict)
     df_agrupado['Custo Unitário'] = df_agrupado['Codigo'].map(custo_dict)
     df_agrupado['Custo Total'] = df_agrupado['Quantidade'] * df_agrupado['Custo Unitário']
-    
+
     return df_agrupado
 
 if uploaded_file_dados and st.button('Calcular Parâmetros'):
@@ -1160,17 +1064,7 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             exemplos_circuitos=distribuir_fases(exemplos_circuitos,fases_QD)
             print(exemplos_circuitos)
             for circuito in exemplos_circuitos:
-                try:
-                    if 'comprimento' in circuito and isinstance(circuito['comprimento'], (int, float)):
-                        circuito['comprimento'] = circuito['comprimento'] / 1000
-                    else:
-                        nome_circuito = circuito['nome'] if isinstance(circuito, dict) and 'nome' in circuito else 'desconhecido'
-                        st.error(f"Erro: O campo 'comprimento' está ausente ou inválido no circuito {nome_circuito}")
-                        circuito['comprimento'] = 0  # Valor padrão para evitar erros subsequentes
-                except Exception as e:
-                    nome_circuito = circuito['nome'] if isinstance(circuito, dict) and 'nome' in circuito else 'desconhecido'
-                    st.error(f"Erro ao processar o comprimento do circuito {nome_circuito}: {str(e)}")
-                    circuito['comprimento'] = 0  # Valor padrão para evitar erros subsequentes
+                circuito['comprimento'] = circuito['comprimento'] / 1000 
                 circuito['queda_tensao_max_admitida'] = 0.05 * circuito['tensao']
             resultados_circuitos, exemplos_circuitos = calcular_parametros_circuitos(exemplos_circuitos, data_tables)
             st.subheader('Resultados dos Circuitos')
@@ -1183,21 +1077,6 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             df_selecionado = resultados_circuitos[['Nome do Circuito', 'Seção do Condutor (mm²)', 'Disjuntor','Comprimento','Número de fases','Tipo de alimentação']]
             df_selecionado['Quantidade de condutor fase'] = df_selecionado['Comprimento'] * df_selecionado['Número de fases']*1000
             # Adicionar coluna para "Seção do Condutor Neutro" com regra de s <= 25
-            # Definindo o mapeamento de seções do condutor neutro conforme NBR 5410
-            seção_neutro_map = {
-                35: 25,
-                50: 25,
-                70: 35,
-                95: 50,
-                120: 70,
-                150: 70,
-                185: 95,
-                240: 120,
-                300: 150,
-                400: 185
-            }
-            
-            # Aplicando a regra de dimensionamento do condutor neutro
             df_selecionado['Seção do Condutor Neutro (mm²)'] = df_selecionado['Seção do Condutor (mm²)'].apply(
                 lambda x: x if x <= 25 else seção_neutro_map.get(x, x)
             )
@@ -1230,13 +1109,13 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             df_terra = df_selecionado[['Codigo SINAPI Condutor de Terra', 'Comprimento terra']].dropna().rename(
                 columns={'Codigo SINAPI Condutor de Terra': 'Codigo', 'Comprimento terra': 'Quantidade'}
             )
-            
+
             # Concatenar os DataFrames
             df_conductors = pd.concat([df_fase, df_neutro, df_terra])
             # Somar as quantidades por código
             df_conductors = df_conductors.groupby('Codigo', as_index=False).sum()
             print(df_conductors)
-            
+
             custos_df=calcular_custo_total(df_conductors,sinapi_df)
             df_disjuntoresaux = df_selecionado.apply(get_disjuntor_sinapi, axis=1)
             df_disjuntores = df_disjuntoresaux.to_frame(name='Codigo')
@@ -1298,6 +1177,6 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
                     5. Após o upload, o projeto será aberto no editor do Overleaf, onde você poderá visualizar e editar o documento em LaTeX.
                 """
                 ))
-            
+
 else:
     st.warning('Por favor, faça o upload dos arquivos necessários para calcular os parâmetros dos circuitos.')
