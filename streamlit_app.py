@@ -7,6 +7,176 @@ from ezdxf.enums import TextEntityAlignment
 from pylatex import Document, Section, Command, Package, Subsection
 from pylatex.utils import NoEscape
 import requests
+# Funções para balanceamento de cargas
+def calcular_balanceamento_cargas(circuitos):
+    """
+    Calcula o balanceamento de cargas entre as fases R, S e T com base nos circuitos processados.
+    
+    Args:
+        circuitos: Lista de dicionários contendo os dados dos circuitos
+        
+    Returns:
+        DataFrame com o balanceamento de cargas formatado
+    """
+    # Inicializar dicionário para armazenar cargas por fase
+    cargas_por_fase = {'R': 0, 'S': 0, 'T': 0}
+    
+    # Dados para a tabela de balanceamento
+    dados_balanceamento = []
+    
+    # Processar cada circuito
+    for circuito in circuitos:
+        nome = circuito['nome']
+        potencia = circuito['potencia']
+        fases = circuito.get('Fases', '')
+        
+        # Inicializar cargas para este circuito
+        carga_r = 0
+        carga_s = 0
+        carga_t = 0
+        
+        # Distribuir a potência de acordo com as fases
+        if 'R' in fases:
+            if len(fases) == 1:  # Monofásico R
+                carga_r = potencia
+            elif len(fases) == 2:  # Bifásico
+                carga_r = potencia / 2
+            elif len(fases) == 3:  # Trifásico
+                carga_r = potencia / 3
+        
+        if 'S' in fases:
+            if len(fases) == 1:  # Monofásico S
+                carga_s = potencia
+            elif len(fases) == 2:  # Bifásico
+                carga_s = potencia / 2
+            elif len(fases) == 3:  # Trifásico
+                carga_s = potencia / 3
+        
+        if 'T' in fases:
+            if len(fases) == 1:  # Monofásico T
+                carga_t = potencia
+            elif len(fases) == 2:  # Bifásico
+                carga_t = potencia / 2
+            elif len(fases) == 3:  # Trifásico
+                carga_t = potencia / 3
+        
+        # Adicionar ao total por fase
+        cargas_por_fase['R'] += carga_r
+        cargas_por_fase['S'] += carga_s
+        cargas_por_fase['T'] += carga_t
+        
+        # Adicionar linha à tabela de balanceamento
+        dados_balanceamento.append({
+            'Circuito': nome,
+            'Fase R (W)': carga_r,
+            'Fase S (W)': carga_s,
+            'Fase T (W)': carga_t,
+            'Total (W)': carga_r + carga_s + carga_t
+        })
+    
+    # Criar DataFrame
+    df_balanceamento = pd.DataFrame(dados_balanceamento)
+    
+    # Adicionar linha de totais
+    total_r = cargas_por_fase['R']
+    total_s = cargas_por_fase['S']
+    total_t = cargas_por_fase['T']
+    total_geral = total_r + total_s + total_t
+    
+    df_balanceamento.loc[len(df_balanceamento)] = {
+        'Circuito': 'TOTAL',
+        'Fase R (W)': total_r,
+        'Fase S (W)': total_s,
+        'Fase T (W)': total_t,
+        'Total (W)': total_geral
+    }
+    
+    # Calcular percentuais
+    percentual_r = (total_r / total_geral) * 100 if total_geral > 0 else 0
+    percentual_s = (total_s / total_geral) * 100 if total_geral > 0 else 0
+    percentual_t = (total_t / total_geral) * 100 if total_geral > 0 else 0
+    
+    df_balanceamento.loc[len(df_balanceamento)] = {
+        'Circuito': 'PERCENTUAL',
+        'Fase R (W)': f'{percentual_r:.2f}%',
+        'Fase S (W)': f'{percentual_s:.2f}%',
+        'Fase T (W)': f'{percentual_t:.2f}%',
+        'Total (W)': '100.00%'
+    }
+    
+    return df_balanceamento
+
+def exibir_tabela_balanceamento(df_balanceamento):
+    """
+    Exibe a tabela de balanceamento de cargas com formatação de cores.
+    
+    Args:
+        df_balanceamento: DataFrame com os dados de balanceamento
+    """
+    # Adicionar CSS para colorir as células
+    st.markdown("""
+    <style>
+    .fase-r { background-color: rgba(255, 0, 0, 0.2); }
+    .fase-s { background-color: rgba(255, 255, 0, 0.2); }
+    .fase-t { background-color: rgba(0, 0, 255, 0.2); }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Exibir tabela formatada
+    st.dataframe(
+        df_balanceamento,
+        column_config={
+            'Circuito': st.column_config.TextColumn('Circuito'),
+            'Fase R (W)': st.column_config.NumberColumn('Fase R (W)', format='%.2f'),
+            'Fase S (W)': st.column_config.NumberColumn('Fase S (W)', format='%.2f'),
+            'Fase T (W)': st.column_config.NumberColumn('Fase T (W)', format='%.2f'),
+            'Total (W)': st.column_config.NumberColumn('Total (W)', format='%.2f')
+        },
+        hide_index=True
+    )
+    
+    # Exibir gráfico de pizza para visualização do balanceamento
+    if not df_balanceamento.empty:
+        st.subheader('Distribuição de Cargas por Fase')
+        # Obter os valores percentuais (penúltima linha, colunas das fases)
+        percentuais_row = df_balanceamento.iloc[-1]
+        
+        # Extrair os percentuais das colunas de fase
+        percentuais = []
+        for col in ['Fase R (W)', 'Fase S (W)', 'Fase T (W)']:
+            val = percentuais_row[col]
+            if isinstance(val, str) and '%' in val:
+                percentuais.append(float(val.strip('%')))
+            else:
+                # Se não for uma string com %, usar os valores da linha de totais
+                total_row = df_balanceamento.iloc[-2]
+                total_geral = total_row['Total (W)']
+                if total_geral > 0:
+                    percentuais.append((total_row[col] / total_geral) * 100)
+                else:
+                    percentuais.append(0)
+        
+        # Criar gráfico de pizza
+        try:
+            import plotly.graph_objects as go
+            fig = go.Figure(data=[go.Pie(
+                labels=['Fase R', 'Fase S', 'Fase T'],
+                values=percentuais,
+                marker=dict(colors=['rgba(255, 0, 0, 0.6)', 'rgba(255, 255, 0, 0.6)', 'rgba(0, 0, 255, 0.6)']),
+                textinfo='label+percent',
+                hoverinfo='label+value+percent'
+            )])
+            
+            fig.update_layout(title='Distribuição de Cargas por Fase (%)')
+            st.plotly_chart(fig)
+        except Exception as e:
+            st.error(f"Erro ao criar gráfico: {e}")
+            # Alternativa simples se plotly não estiver disponível
+            st.write("Distribuição percentual:")
+            st.write(f"Fase R: {percentuais[0]:.2f}%")
+            st.write(f"Fase S: {percentuais[1]:.2f}%")
+            st.write(f"Fase T: {percentuais[2]:.2f}%")
+
 # Funções para cálculos elétricos
 def calcular_corrente_nominal(potencia, tensao, fator_potencia, num_fases):
     if num_fases == 1:
@@ -1124,6 +1294,14 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             df_custosconcat = pd.concat([custo_total_quadros, custos_disj, custos_df], axis=0, ignore_index=True)
             print(custos_df)
             st.write(df_selecionado[['Nome do Circuito','Seção do Condutor (mm²)','Disjuntor','Quantidade de condutor fase','Seção do Condutor Neutro (mm²)','Comprimento neutro','Seção do Condutor de Terra (mm²)','Comprimento terra']])
+            
+            # Exibir tabela de balanceamento de cargas
+            st.subheader('Balanceamento de Cargas')
+            df_balanceamento = calcular_balanceamento_cargas(exemplos_circuitos)
+            exibir_tabela_balanceamento(df_balanceamento)
+            
+            # A função exibir_tabela_balanceamento já inclui a exibição do gráfico de pizza
+            
             st.subheader('Orçamento com Base SINAPI')
             st.write(df_custosconcat)
             total_custo = df_custosconcat['Custo Total'].sum()
