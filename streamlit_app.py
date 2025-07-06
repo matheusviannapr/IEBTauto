@@ -105,6 +105,33 @@ def ajustar_condutor_queda_tensao(corrente_nominal, comprimento, secao_inicial, 
 
 def calcular_parametros_circuitos(lista_circuitos, data_tables):
     resultados = []
+    fases_qd = 3  # Assumindo sistema trifásico por padrão
+    
+    # Distribuir as fases antes de calcular os parâmetros
+    lista_circuitos, carga_fase = distribuir_fases(lista_circuitos, fases_qd)
+    
+    # Criar e exibir a tabela de balanceamento
+    st.subheader('Verificação do Balanceamento de Cargas')
+    df_balanceamento = criar_tabela_balanceamento(lista_circuitos, carga_fase)
+    
+    # Aplicar estilo à tabela
+    def highlight_cells(val):
+        if isinstance(val, (int, float)):
+            return 'background-color: #E8F5E9'
+        return ''
+    
+    # Exibir a tabela com estilo
+    st.dataframe(
+        df_balanceamento.style
+        .applymap(highlight_cells)
+        .format({
+            'Fase R': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x,
+            'Fase S': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x,
+            'Fase T': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x,
+            'Carga/Circuito': lambda x: f'{x:.0f}' if isinstance(x, (int, float)) else x
+        })
+    )
+    
     for circuito in lista_circuitos:
         corrente_nominal = calcular_corrente_nominal(circuito['potencia'], circuito['tensao'], circuito['fator_potencia'], circuito['num_fases'])
         fator_correcao_temp = encontrar_fator_correcao(circuito['temperatura'], data_tables['Fator de correção de temperatur'])
@@ -209,7 +236,77 @@ def distribuir_fases(circuitos, fases_qd):
             else:
                 st.warning('Existem circuitos que necessitam de mais de uma fase, reveja a Configuração da Alimentação Geral', icon="⚠️")
     
-    return circuitos
+    return circuitos, carga_fase
+
+def criar_tabela_balanceamento(circuitos, carga_fase):
+    # Criar DataFrame para a tabela de balanceamento
+    data = []
+    total_potencia = 0
+    
+    # Adicionar circuitos à tabela
+    for i, circuito in enumerate(circuitos, 1):
+        row = {
+            'Circuitos': i,
+            'Fase R': '',
+            'Fase S': '',
+            'Fase T': '',
+            'Carga/Circuito': circuito['potencia']
+        }
+        
+        # Distribuir potência nas fases
+        if 'R' in circuito['Fases']:
+            if len(circuito['Fases']) == 1:
+                row['Fase R'] = circuito['potencia']
+            elif len(circuito['Fases']) == 2:
+                row['Fase R'] = circuito['potencia'] / 2
+            else:  # Trifásico
+                row['Fase R'] = circuito['potencia'] / 3
+        
+        if 'S' in circuito['Fases']:
+            if len(circuito['Fases']) == 1:
+                row['Fase S'] = circuito['potencia']
+            elif len(circuito['Fases']) == 2:
+                row['Fase S'] = circuito['potencia'] / 2
+            else:  # Trifásico
+                row['Fase S'] = circuito['potencia'] / 3
+        
+        if 'T' in circuito['Fases']:
+            if len(circuito['Fases']) == 1:
+                row['Fase T'] = circuito['potencia']
+            elif len(circuito['Fases']) == 2:
+                row['Fase T'] = circuito['potencia'] / 2
+            else:  # Trifásico
+                row['Fase T'] = circuito['potencia'] / 3
+        
+        total_potencia += circuito['potencia']
+        data.append(row)
+    
+    # Criar DataFrame
+    df = pd.DataFrame(data)
+    
+    # Adicionar linha de totais
+    total_row = {
+        'Circuitos': 'Carga Total:',
+        'Fase R': carga_fase['R'],
+        'Fase S': carga_fase['S'],
+        'Fase T': carga_fase['T'],
+        'Carga/Circuito': total_potencia
+    }
+    df = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
+    
+    # Adicionar linha de percentuais
+    total_carga = sum(carga_fase.values())
+    if total_carga > 0:
+        percentual_row = {
+            'Circuitos': 'Percentual:',
+            'Fase R': f"{(carga_fase['R'] / total_carga * 100):.1f}%",
+            'Fase S': f"{(carga_fase['S'] / total_carga * 100):.1f}%",
+            'Fase T': f"{(carga_fase['T'] / total_carga * 100):.1f}%",
+            'Carga/Circuito': ''
+        }
+        df = pd.concat([df, pd.DataFrame([percentual_row])], ignore_index=True)
+    
+    return df
 
 
 def encontrar_disjuntor_menor(corrente, tabela_disjuntores):
