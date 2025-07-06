@@ -1042,7 +1042,7 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                 fios_block_name = 'Trifi_Fios_Tri'
                 
             # Sempre usar o arquivo Trifi_Disjuntor_Bi.dxf que contém todos os blocos R, S, T
-            fios_filename = 'Trifi_Disjuntor_Mono.dxf'
+            fios_filename = 'Trifi_Disjuntor_Bi.dxf'
                 
             disjuntor_attributes = {
                 'corrente': str(row['Disjuntor (Ampere)']),
@@ -1066,11 +1066,11 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
                     dr_filename = 'Trifi_DR.dxf'
                     dr_block_name = 'Trifi_DR'
                     dr_attributes = {'corrente': f'{str(corrente_dr)} A'} 
-                    insert_point_dr = (x_offset + 70, y_offset + vertical_offset)  # Ajusta a posição do DR com base no offset vertical
+                    insert_point_dr = (x_offset + 70, y_offset)  # Posiciona o DR na mesma linha vertical do disjuntor
                     insert_dxf_block_with_attributes(msp_trifilar, dr_filename, dr_block_name, insert_point_dr, dr_attributes, doc_trifilar)
-                    insert_point_fios = (x_offset, y_offset + vertical_offset)  # Ajusta a posição dos fios após o DR
+                    insert_point_fios = (x_offset, y_offset)  # Posiciona os fios na mesma linha vertical do disjuntor
             else:
-                insert_point_fios = (x_offset, y_offset + vertical_offset)  # Usa o offset vertical específico
+                insert_point_fios = (x_offset, y_offset)  # Posiciona os fios na mesma linha vertical do disjuntor
                 
             # Insere o bloco dos fios
             if row['num_fases'] == 2 and special_bifasico:
@@ -1088,29 +1088,27 @@ def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
 
             # Insere a entrada do quadro no circuito central
             if index == circuito_central_index:
-                # Define o offset vertical para a entrada do quadro com base no número de fases
-                entrada_offset = 60 if fases_Q == 3 else 40
-                
+                # Não usa mais offset vertical para a entrada do quadro
                 if fases_Q == 3:
                     entrada_tri_attributes = {
                         'CORRENTE': str(disjuntores_gerais[nome_quadro])
                     }
-                    insert_point_entrada_tri = (x_offset, y_offset + entrada_offset)
+                    insert_point_entrada_tri = (x_offset, y_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_tri.dxf', 'Trifi_entrada', insert_point_entrada_tri, entrada_tri_attributes, doc_trifilar)
                 elif fases_Q == 2:
                     fios_bi_attributes = {
                         'CORRENTE': str(disjuntores_gerais[nome_quadro])
                     }
-                    insert_point_fios_bi = (x_offset, y_offset + entrada_offset)
+                    insert_point_fios_bi = (x_offset, y_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_bi.dxf', 'Trifi_entrada', insert_point_fios_bi, fios_bi_attributes, doc_trifilar)
                 elif fases_Q == 1:
                     fios_mono_attributes = {
                         'CORRENTE': str(disjuntores_gerais[nome_quadro])
                     }
-                    insert_point_fios_mono = (x_offset, y_offset + entrada_offset)
+                    insert_point_fios_mono = (x_offset, y_offset)
                     insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_mono.dxf', 'Trifi_entrada', insert_point_fios_mono, fios_mono_attributes, doc_trifilar)
             
-            y_offset -= 40
+            y_offset -= 30
 
             quadro_min_x = -70
             quadro_min_y = y_offset
