@@ -7,176 +7,6 @@ from ezdxf.enums import TextEntityAlignment
 from pylatex import Document, Section, Command, Package, Subsection
 from pylatex.utils import NoEscape
 import requests
-# Funções para balanceamento de cargas
-def calcular_balanceamento_cargas(circuitos):
-    """
-    Calcula o balanceamento de cargas entre as fases R, S e T com base nos circuitos processados.
-    
-    Args:
-        circuitos: Lista de dicionários contendo os dados dos circuitos
-        
-    Returns:
-        DataFrame com o balanceamento de cargas formatado
-    """
-    # Inicializar dicionário para armazenar cargas por fase
-    cargas_por_fase = {'R': 0, 'S': 0, 'T': 0}
-    
-    # Dados para a tabela de balanceamento
-    dados_balanceamento = []
-    
-    # Processar cada circuito
-    for circuito in circuitos:
-        nome = circuito['nome']
-        potencia = circuito['potencia']
-        fases = circuito.get('Fases', '')
-        
-        # Inicializar cargas para este circuito
-        carga_r = 0
-        carga_s = 0
-        carga_t = 0
-        
-        # Distribuir a potência de acordo com as fases
-        if 'R' in fases:
-            if len(fases) == 1:  # Monofásico R
-                carga_r = potencia
-            elif len(fases) == 2:  # Bifásico
-                carga_r = potencia / 2
-            elif len(fases) == 3:  # Trifásico
-                carga_r = potencia / 3
-        
-        if 'S' in fases:
-            if len(fases) == 1:  # Monofásico S
-                carga_s = potencia
-            elif len(fases) == 2:  # Bifásico
-                carga_s = potencia / 2
-            elif len(fases) == 3:  # Trifásico
-                carga_s = potencia / 3
-        
-        if 'T' in fases:
-            if len(fases) == 1:  # Monofásico T
-                carga_t = potencia
-            elif len(fases) == 2:  # Bifásico
-                carga_t = potencia / 2
-            elif len(fases) == 3:  # Trifásico
-                carga_t = potencia / 3
-        
-        # Adicionar ao total por fase
-        cargas_por_fase['R'] += carga_r
-        cargas_por_fase['S'] += carga_s
-        cargas_por_fase['T'] += carga_t
-        
-        # Adicionar linha à tabela de balanceamento
-        dados_balanceamento.append({
-            'Circuito': nome,
-            'Fase R (W)': carga_r,
-            'Fase S (W)': carga_s,
-            'Fase T (W)': carga_t,
-            'Total (W)': carga_r + carga_s + carga_t
-        })
-    
-    # Criar DataFrame
-    df_balanceamento = pd.DataFrame(dados_balanceamento)
-    
-    # Adicionar linha de totais
-    total_r = cargas_por_fase['R']
-    total_s = cargas_por_fase['S']
-    total_t = cargas_por_fase['T']
-    total_geral = total_r + total_s + total_t
-    
-    df_balanceamento.loc[len(df_balanceamento)] = {
-        'Circuito': 'TOTAL',
-        'Fase R (W)': total_r,
-        'Fase S (W)': total_s,
-        'Fase T (W)': total_t,
-        'Total (W)': total_geral
-    }
-    
-    # Calcular percentuais
-    percentual_r = (total_r / total_geral) * 100 if total_geral > 0 else 0
-    percentual_s = (total_s / total_geral) * 100 if total_geral > 0 else 0
-    percentual_t = (total_t / total_geral) * 100 if total_geral > 0 else 0
-    
-    df_balanceamento.loc[len(df_balanceamento)] = {
-        'Circuito': 'PERCENTUAL',
-        'Fase R (W)': f'{percentual_r:.2f}%',
-        'Fase S (W)': f'{percentual_s:.2f}%',
-        'Fase T (W)': f'{percentual_t:.2f}%',
-        'Total (W)': '100.00%'
-    }
-    
-    return df_balanceamento
-
-def exibir_tabela_balanceamento(df_balanceamento):
-    """
-    Exibe a tabela de balanceamento de cargas com formatação de cores.
-    
-    Args:
-        df_balanceamento: DataFrame com os dados de balanceamento
-    """
-    # Adicionar CSS para colorir as células
-    st.markdown("""
-    <style>
-    .fase-r { background-color: rgba(255, 0, 0, 0.2); }
-    .fase-s { background-color: rgba(255, 255, 0, 0.2); }
-    .fase-t { background-color: rgba(0, 0, 255, 0.2); }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Exibir tabela formatada
-    st.dataframe(
-        df_balanceamento,
-        column_config={
-            'Circuito': st.column_config.TextColumn('Circuito'),
-            'Fase R (W)': st.column_config.NumberColumn('Fase R (W)', format='%.2f'),
-            'Fase S (W)': st.column_config.NumberColumn('Fase S (W)', format='%.2f'),
-            'Fase T (W)': st.column_config.NumberColumn('Fase T (W)', format='%.2f'),
-            'Total (W)': st.column_config.NumberColumn('Total (W)', format='%.2f')
-        },
-        hide_index=True
-    )
-    
-    # Exibir gráfico de pizza para visualização do balanceamento
-    if not df_balanceamento.empty:
-        st.subheader('Distribuição de Cargas por Fase')
-        # Obter os valores percentuais (penúltima linha, colunas das fases)
-        percentuais_row = df_balanceamento.iloc[-1]
-        
-        # Extrair os percentuais das colunas de fase
-        percentuais = []
-        for col in ['Fase R (W)', 'Fase S (W)', 'Fase T (W)']:
-            val = percentuais_row[col]
-            if isinstance(val, str) and '%' in val:
-                percentuais.append(float(val.strip('%')))
-            else:
-                # Se não for uma string com %, usar os valores da linha de totais
-                total_row = df_balanceamento.iloc[-2]
-                total_geral = total_row['Total (W)']
-                if total_geral > 0:
-                    percentuais.append((total_row[col] / total_geral) * 100)
-                else:
-                    percentuais.append(0)
-        
-        # Criar gráfico de pizza
-        try:
-            import plotly.graph_objects as go
-            fig = go.Figure(data=[go.Pie(
-                labels=['Fase R', 'Fase S', 'Fase T'],
-                values=percentuais,
-                marker=dict(colors=['rgba(255, 0, 0, 0.6)', 'rgba(255, 255, 0, 0.6)', 'rgba(0, 0, 255, 0.6)']),
-                textinfo='label+percent',
-                hoverinfo='label+value+percent'
-            )])
-            
-            fig.update_layout(title='Distribuição de Cargas por Fase (%)')
-            st.plotly_chart(fig)
-        except Exception as e:
-            st.error(f"Erro ao criar gráfico: {e}")
-            # Alternativa simples se plotly não estiver disponível
-            st.write("Distribuição percentual:")
-            st.write(f"Fase R: {percentuais[0]:.2f}%")
-            st.write(f"Fase S: {percentuais[1]:.2f}%")
-            st.write(f"Fase T: {percentuais[2]:.2f}%")
-
 # Funções para cálculos elétricos
 def calcular_corrente_nominal(potencia, tensao, fator_potencia, num_fases):
     if num_fases == 1:
@@ -227,7 +57,7 @@ def encontrar_capacidade_corrente(secao_condutor, tabela_capacidade, metodo_inst
 
 def determinar_disjuntor(corrente_corrigida, secao_final, tabela_disjuntores, tabela_capacidade, metodo_instalacao, numero_fases):
     capacidade_condutor = encontrar_capacidade_corrente(secao_final, tabela_capacidade, metodo_instalacao)
-
+    
     # Definindo o tipo de disjuntor baseado no número de fases
     if numero_fases == 1:
         tipo_disjuntor = 'Monopolar'
@@ -237,18 +67,18 @@ def determinar_disjuntor(corrente_corrigida, secao_final, tabela_disjuntores, ta
         tipo_disjuntor = 'Tripolar'
     else:
         raise ValueError("Número de fases inválido. Deve ser 1, 2 ou 3.")
-
+    
     # Filtrando a tabela de disjuntores de acordo com o tipo
     tabela_disjuntores_filtrada = tabela_disjuntores[tabela_disjuntores['Tipo de disjuntor'] == tipo_disjuntor]
-
+    
     # Ordenando a tabela filtrada pela corrente nominal
     tabela_disjuntores_ordenada = tabela_disjuntores_filtrada.sort_values(by='Corrente nominal')
-
+    
     # Iterando pela tabela ordenada para encontrar o disjuntor adequado
     for index, disjuntor in tabela_disjuntores_ordenada.iterrows():
         if corrente_corrigida < disjuntor['Corrente nominal'] < capacidade_condutor:
             return disjuntor['Corrente nominal']
-
+    
     # Caso não encontre um disjuntor adequado
     return None
 
@@ -341,11 +171,11 @@ def calcular_disjuntor_qgbt(disjuntores_gerais, tabela_fator_demanda_qgbt, tensa
 
 def distribuir_fases(circuitos, fases_qd):
     carga_fase = {'R': 0, 'S': 0, 'T': 0}
-
+    
     for circuito in circuitos:
         num_fases = circuito['num_fases']
         potencia = circuito['potencia']
-
+        
         if fases_qd == 3:
             if num_fases == 1:
                 fase = min(carga_fase, key=carga_fase.get)
@@ -361,7 +191,7 @@ def distribuir_fases(circuitos, fases_qd):
                 carga_fase['S'] += potencia / 3
                 carga_fase['T'] += potencia / 3
                 circuito['Fases'] = 'RST'
-
+        
         elif fases_qd == 2:
             if num_fases == 1:
                 fase = min(['R', 'S'], key=lambda f: carga_fase[f])
@@ -371,14 +201,14 @@ def distribuir_fases(circuitos, fases_qd):
                 carga_fase['R'] += potencia / 2
                 carga_fase['S'] += potencia / 2
                 circuito['Fases'] = 'RS'
-
+        
         elif fases_qd == 1:
             if num_fases == 1:
                 carga_fase['R'] += potencia
                 circuito['Fases'] = 'R'
             else:
                 st.warning('Existem circuitos que necessitam de mais de uma fase, reveja a Configuração da Alimentação Geral', icon="⚠️")
-
+    
     return circuitos
 
 
@@ -399,8 +229,8 @@ def ordenar_circuitos(circuitos):
             except ValueError:
                 return float('inf')  # Caso não tenha número, coloca no final
         return float('inf')
-
-    return sorted(circuitos, key=lambda x: (x['Quadro'], extrair_numero(x['nome'])))
+    
+    return sorted(circuitos, key=lambda x: extrair_numero(x['nome']))
 
 def criar_lista_materiais(circuitos, disjuntores_gerais):
     materiais = {}
@@ -517,11 +347,9 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
         valor_queda_tensao = tabela_queda_tensao.loc[tabela_queda_tensao['seção do condutor'] == secao_condutor, 'Queda de tensão (V/A.km)'].iloc[0]
         queda_tensao = valor_queda_tensao * corrente_nominal * comprimento
         queda_tensao = round(queda_tensao,2)
-        quadro = circuito['Quadro']
 
         n_factor = '0' if num_fases == 1 else '1' if num_fases == 2 else '2'
         latex_content += f"\\subsection*{{Circuito: {nome}}}\n"
-        latex_content += f"\\subsection*{{Circuito: {nome} - {quadro} }}\n"
         latex_content += "\\begin{itemize}\n"
         latex_content += f"    \\item \\textbf{{Dados do Circuito:}} Potência = {potencia}W, Tensão = {tensao}V, Fator de Potência = {fator_potencia}, Número de Fases = {num_fases}.\n"
         latex_content += f"    \\item \\textbf{{Cálculo da Corrente Nominal (Inominal):}} \[ I_{{\\text{{nominal}}}} = \\frac{{{potencia}}}{{\\sqrt{{3}}^{{{n_factor}}} \\times {tensao} \\times {fator_potencia}}} \] = {corrente_nominal} A.\n"
@@ -544,7 +372,7 @@ def memcalc(circuitos, resultados_circuitos, tabela_queda_tensao):
 
 def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_gerais, disjuntor_qgbt, data_tables):
     doc = Document(documentclass='article', document_options='11pt')
-
+    
     # Adiciona os pacotes necessários
     doc.packages.append(Package('makeidx'))
     doc.packages.append(Package('multirow'))
@@ -559,11 +387,11 @@ def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_ger
     doc.packages.append(Package('amssymb'))
     doc.packages.append(Package('pdflscape'))
     doc.packages.append(Package('geometry', options='paperwidth=595pt,paperheight=841pt,top=23pt,right=56pt,bottom=56pt,left=56pt'))
-
+    
     # Adiciona o autor e título
     doc.preamble.append(Command('author', 'CHRISTINE CACERES BURGHART'))
     doc.preamble.append(Command('title', ''))
-
+    
     # Adiciona o novo ambiente de indentação
     doc.preamble.append(NoEscape(r"""
     \makeatletter
@@ -575,20 +403,20 @@ def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_ger
     \parshape 1\@totalleftmargin \linewidth\ignorespaces}{\par}%
     \makeatother
     """))
-
+    
     # Adiciona o início do documento
     doc.append(NoEscape(r'\begin{document}'))
     doc.append(NoEscape(r'\begin{center}'))
     doc.append(NoEscape(r'\large \textbf{OBJETO:} Memorial de dimensionamento para os circuitos do NOMEDOPROJETO'))
     doc.append(NoEscape(r'\end{center}'))
-
+    
     # Adiciona seções ao documento
     with doc.create(Section('Introdução')):
         doc.append('Este documento descreve o procedimento técnico detalhado para o dimensionamento de condutores e disjuntores em circuitos elétricos residenciais, baseando-se nas normas técnicas ABNT NBR 5410 e ABNT NBR 5471. A metodologia aborda a determinação da seção transversal dos condutores e a escolha de disjuntores, levando em consideração critérios como capacidade de condução de corrente, queda de tensão, e proteção contra sobrecarga e curto-circuito.')
-
+    
     with doc.create(Section('Metodologia e Normas Aplicadas')):
         doc.append('O dimensionamento dos condutores elétricos segue as diretrizes estabelecidas pelas normas ABNT NBR 5410 e ABNT NBR 5471, que definem os padrões para instalações elétricas de baixa tensão e para condutores de energia elétrica, respectivamente.')
-
+    
     with doc.create(Section('Cálculos e Resultados')):
         with doc.create(Subsection('Cálculo da Corrente Nominal do Circuito')):
             doc.append(NoEscape(r'A corrente nominal (\(I_{\text{nominal}}\)) é calculada pela fórmula:'))
@@ -596,18 +424,18 @@ def criar_relatorio_latex(circuitos, resultados, caminho_salvar, disjuntores_ger
             doc.append(NoEscape(r'para circuitos trifásicos, e'))
             doc.append(NoEscape(r'\[ I_{\text{nominal}} = \frac{P}{V \cdot \cos(\phi)} \]'))
             doc.append(NoEscape(r'para circuitos monofásicos, onde \(P\) é a potência, \(V\) a tensão e \(\cos(\phi)\) o fator de potência.'))
-
+        
         with doc.create(Subsection('Cálculo da Corrente Corrigida')):
             doc.append(NoEscape(r'A corrente corrigida (\(I_{\text{corrigida}}\)) considera os fatores de temperatura e agrupamento:'))
             doc.append(NoEscape(r'\[ I_{\text{corrigida}} = \frac{I_{\text{nominal}}}{\text{Fator\_Temperatura} \times \text{Fator\_Agrupamento}} \]'))
-
+        
         with doc.create(Subsection('Seleção do Condutor')):
             doc.append('A seleção do condutor é realizada garantindo que sua capacidade de corrente seja maior que \( I_{\text{corrigida}} \). A seção mínima é determinada pelo método de instalação e as especificações da norma ABNT NBR 5410.')
-
+        
         with doc.create(Subsection('Cálculo da Queda de Tensão')):
             doc.append('A queda de tensão é calculada considerando a resistência e a reatância do condutor, bem como a distância do circuito:')
             doc.append(NoEscape(r'\[ \Delta V =  {I_{\text{nominal}} \times \text{comprimento} \times \text{V/A.km} \]'))
-
+        
         with doc.create(Subsection('Escolha do Disjuntor')):
             doc.append(NoEscape(r'O disjuntor é selecionado assegurando que \( I_{\text{corrigida}} < \) I_{\text{disjuntor}} \( < \) Capacidade de corrente do condutor.'))
 
@@ -775,7 +603,7 @@ def compile_tex_online(tex_content):
         return response.content  # Retornando o conteúdo do PDF gerado
     else:
         return None
-
+    
 def selecionar_dr(corrente_disjuntor):
     # Lista de correntes nominais dos DRs
     correntes_dr = [25, 40, 63, 80]
@@ -802,13 +630,13 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
     if not isinstance(exemplos_circuitos, pd.DataFrame):
         exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
     quadros = exemplos_circuitos.groupby('Quadro')
-
+    
     x_offset = 0
     y_offset = 0
     y_offset_last=50
     for nome_quadro, df_quadro in quadros:
         # Adiciona um bloco para o quadro
-
+        
         y_offset -= 50  # Espaçamento entre o quadro e seus circuitos
 
         df_unifilar = pd.DataFrame({
@@ -849,14 +677,13 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
                 disjuntor_block_name = 'Disjuntor_Tri'
                 fios_filename = 'fios_tri.dxf'
                 fios_block_name = 'Fios_Tri'
-            disjuntor_attributes = {
-                'corrente': str(row['Disjuntor (Ampere)']),
-                'nome': row['nome'],
+            disjuntor_attributes = {'corrente': str(row['Disjuntor (Ampere)'])}
+            fios_attributes = {
+                'seção': str(row['Seção do Condutor (mm²)']),
                 'Potência': str(row['potencia']),
-                'seção': str(row['Seção do Condutor (mm²)'])
+                'nome': row['nome'],
+                'fases': row['Fases']
             }
-            fios_attributes = {}
-            # Os blocos de fios não devem ter nenhum atributo
             corrente_disjuntor = int(row['Disjuntor (Ampere)'].replace(' A', ''))
             insert_point_disjuntor = (x_offset, y_offset)
             insert_dxf_block_with_attributes(msp, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes)
@@ -894,14 +721,14 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
                  insert_point_fios_mono = (x_offset, y_offset + 30)
                  insert_dxf_block_with_attributes(msp, 'entrada_mono.dxf', 'entrada', insert_point_fios_mono, fios_mono_attributes)
             y_offset -= 30
-
+            
 
             quadro_min_x = -70
             quadro_min_y = y_offset
             quadro_max_x = 90
             quadro_max_y = y_offset_last-30
-
-
+    
+            
         y_offset_last=y_offset-30
         # Adiciona o retângulo em torno do quadro
         padding = 10
@@ -918,20 +745,17 @@ def gerar_diagrama_unifilar(exemplos_circuitos,disjuntores_gerais,fases_Q):
 
     output_path = 'diagrama_unifilar_ajustado.dxf'
     doc.saveas(output_path)
-
+    
     return output_path
 
-def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_point, attributes, target_doc=None):
+def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_point, attributes):
     try:
-        if target_doc is None:
-            target_doc = doc
-            
         block_doc = ezdxf.readfile(block_filename)
         if block_name not in block_doc.blocks:
             raise ValueError(f"Block {block_name} not found in the file {block_filename}")
         block = block_doc.blocks.get(block_name)
-        if block_name not in target_doc.blocks:
-            new_block = target_doc.blocks.new(name=block_name)
+        if block_name not in doc.blocks:
+            new_block = doc.blocks.new(name=block_name)
             for entity in block:
                 new_block.add_entity(entity.copy())
         block_ref = msp.add_blockref(block_name, insert_point)
@@ -939,223 +763,6 @@ def insert_dxf_block_with_attributes(msp, block_filename, block_name, insert_poi
             block_ref.add_attrib(tag, value)
     except Exception as e:
         print(f"Error inserting block {block_name} from {block_filename}: {e}")
-
-def gerar_diagrama_trifilar(exemplos_circuitos, disjuntores_gerais, fases_Q):
-    # Cria um novo documento DXF para o diagrama trifilar
-    doc_trifilar = ezdxf.new(dxfversion='R2010')
-    msp_trifilar = doc_trifilar.modelspace()
-    
-    # Agrupa os circuitos pelo quadro
-    if not isinstance(exemplos_circuitos, pd.DataFrame):
-        exemplos_circuitos = pd.DataFrame(exemplos_circuitos)
-    quadros = exemplos_circuitos.groupby('Quadro')
-
-    x_offset = 0
-    y_offset = 0
-    y_offset_last = 50
-    
-    for nome_quadro, df_quadro in quadros:
-        # Adiciona um bloco para o quadro
-        y_offset -= 50  # Espaçamento entre o quadro e seus circuitos
-
-        df_trifilar = pd.DataFrame({
-            'num_fases': [circuito['num_fases'] for circuito in df_quadro.to_dict('records')],
-            'nome': [circuito['nome'] for circuito in df_quadro.to_dict('records')],
-            'potencia': [f"{circuito['potencia']} W" for circuito in df_quadro.to_dict('records')],
-            'Seção do Condutor (mm²)': [f"{circuito['Seção do Condutor (mm²)']} mm2" for circuito in df_quadro.to_dict('records')],
-            'Disjuntor (Ampere)': [f"{circuito['Disjuntor (Ampere)']} A" for circuito in df_quadro.to_dict('records')],
-            'Fases': [circuito['Fases'] for circuito in df_quadro.to_dict('records')],
-            'num_fases1': [circuito['num_fases1'] for circuito in df_quadro.to_dict('records')],
-            'DR': [circuito['DR'] for circuito in df_quadro.to_dict('records')]
-        })
-        
-        df_ordenado_trifilar = df_trifilar
-        quadro_min_x = float('inf')
-        quadro_min_y = float('inf')
-        quadro_max_x = float('-inf')
-        quadro_max_y = float('-inf')
-        
-        num_circuitos = len(df_ordenado_trifilar)
-        circuito_central_index = num_circuitos // 2
-        
-        # Pré-calcular os offsets verticais para cada circuito com base no próximo circuito
-        vertical_offsets = []
-        for i, row in df_ordenado_trifilar.iterrows():
-            # Para o último circuito, usamos seu próprio offset
-            if i == len(df_ordenado_trifilar) - 1:
-                if row['num_fases'] == 3:
-                    vertical_offsets.append(60)  # Offset para trifásico
-                else:
-                    vertical_offsets.append(40)  # Offset para mono/bifásico
-            else:
-                # Para os demais circuitos, usamos o offset do próximo
-                next_row = df_ordenado_trifilar.iloc[i+1]
-                if next_row['num_fases'] == 3:
-                    vertical_offsets.append(60)  # Offset para trifásico
-                else:
-                    vertical_offsets.append(40)  # Offset para mono/bifásico
-        
-        for index, row in df_ordenado_trifilar.iterrows():
-            # Seleciona os blocos apropriados para o diagrama trifilar com base no número de fases e nas fases específicas
-            fases = row['Fases']
-            
-            # Determina o tipo de disjuntor com base no número de fases
-            if row['num_fases'] == 1:
-                disjuntor_filename = 'Trifi_Disjuntor_Mono.dxf'
-                disjuntor_block_name = 'Trifi_Disjuntor_Mono'
-            elif row['num_fases'] == 2:
-                disjuntor_filename = 'Trifi_Disjuntor_Bi.dxf'
-                disjuntor_block_name = 'Trifi_Disjuntor_Bi'
-            elif row['num_fases'] == 3:
-                disjuntor_filename = 'Trifi_Disjuntor_Tri.dxf'
-                disjuntor_block_name = 'Trifi_Disjuntor_Tri'
-            
-            # Seleciona os blocos de fios com base nas fases específicas
-            if row['num_fases'] == 1:
-                if 'R' in fases:
-                    if row['num_fases1'] == "F+N+T":
-                        fios_filename = 'Trifi-R-Monopolar.dxf'
-                        fios_block_name = 'Trifi-R-Monopolar'
-                    else:  # F+N
-                        fios_filename = 'Trifi-R-Monopolar2.dxf'
-                        fios_block_name = 'Trifi-R-Monopolar2'
-                elif 'S' in fases:
-                    if row['num_fases1'] == "F+N+T":
-                        fios_filename = 'Trifi-S-Monopolar.dxf'
-                        fios_block_name = 'Trifi-S-Monopolar'
-                    else:  # F+N
-                        fios_filename = 'Trifi-S-Monopolar2.dxf'
-                        fios_block_name = 'Trifi-S-Monopolar2'
-                elif 'T' in fases:
-                    if row['num_fases1'] == "F+N+T":
-                        fios_filename = 'Trifi-T-Monopolar.dxf'
-                        fios_block_name = 'Trifi-T-Monopolar'
-                    else:  # F+N
-                        fios_filename = 'Trifi-T-Monopolar2.dxf'
-                        fios_block_name = 'Trifi-T-Monopolar2'
-            elif row['num_fases'] == 2:
-                # Definir flag para tratamento especial de RS e ST
-                special_bifasico = False
-                
-                # Verificar a string de fases como um todo
-                if fases == 'RS' or fases == 'SR':
-                    # Para RS, vamos usar tratamento especial
-                    special_bifasico = True
-                    special_fase1 = 'S'
-                    special_fase2 = 'R'
-                elif fases == 'RT' or fases == 'TR':
-                    fios_filename = 'Trifi-RT-Bipolar.dxf'
-                    fios_block_name = 'Trifi-RT-Bipolar'
-                elif fases == 'ST' or fases == 'TS':
-                    # Para ST, vamos usar tratamento especial
-                    special_bifasico = True
-                    special_fase1 = 'S'
-                    special_fase2 = 'T'
-            elif row['num_fases'] == 3:
-                fios_filename = 'Trifi_Fios_Tri.dxf'
-                fios_block_name = 'Trifi_Fios_Tri'
-                
-            # Sempre usar o arquivo Trifi_Disjuntor_Bi.dxf que contém todos os blocos R, S, T
-            fios_filename = 'Trifi_Disjuntor_Mono.dxf'
-                
-            disjuntor_attributes = {
-                'corrente': str(row['Disjuntor (Ampere)']),
-                'nome': row['nome'],
-                'Potência': str(row['potencia']),
-                'seção': str(row['Seção do Condutor (mm²)'])
-            }
-            fios_attributes = {}
-            # Os blocos de fios não devem ter nenhum atributo
-            
-            corrente_disjuntor = int(row['Disjuntor (Ampere)'].replace(' A', ''))
-            insert_point_disjuntor = (x_offset, y_offset)
-            
-            # Insere o bloco do disjuntor trifilar
-            insert_dxf_block_with_attributes(msp_trifilar, disjuntor_filename, disjuntor_block_name, insert_point_disjuntor, disjuntor_attributes, doc_trifilar)
-            
-            # Verifica se tem DR e insere se necessário
-            if row['DR'] == True:
-                corrente_dr = selecionar_dr(corrente_disjuntor)
-                if corrente_dr:
-                    dr_filename = 'Trifi_DR.dxf'
-                    dr_block_name = 'Trifi_DR'
-                    dr_attributes = {'corrente': f'{str(corrente_dr)} A'} 
-                    insert_point_dr = (x_offset + 70, y_offset)  # Posiciona o DR na mesma linha vertical do disjuntor
-                    insert_dxf_block_with_attributes(msp_trifilar, dr_filename, dr_block_name, insert_point_dr, dr_attributes, doc_trifilar)
-                    insert_point_fios = (x_offset, y_offset)  # Posiciona os fios na mesma linha vertical do disjuntor
-            else:
-                insert_point_fios = (x_offset, y_offset)  # Posiciona os fios na mesma linha vertical do disjuntor
-                
-            # Insere o bloco dos fios
-            if row['num_fases'] == 2 and special_bifasico:
-                # Para circuitos bifásicos RS ou ST, inserir dois blocos monopolares
-                # Primeiro bloco - fase 1 (S)
-                mono_block_name = f'Trifi-{special_fase1}-Monopolar'
-                # Adicionar offset de 10 unidades para blocos monopolares
-                monopolar_insert_point = (insert_point_fios[0], insert_point_fios[1] + 10)
-                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, mono_block_name, monopolar_insert_point, fios_attributes, doc_trifilar)
-                
-                # Segundo bloco - fase 2 (R ou T)
-                bipolar_block_name = f'Trifi-{special_fase2}-Bipolar'
-                insert_dxf_block_with_attributes(msp_trifilar, fios_filename, bipolar_block_name, insert_point_fios, fios_attributes, doc_trifilar)
-            else:
-                # Para outros casos, inserir o bloco normalmente
-                # Adicionar offset de 10 unidades para blocos monopolares
-                if 'Monopolar' in fios_block_name:
-                    monopolar_insert_point = (insert_point_fios[0], insert_point_fios[1] + 10)
-                    insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, monopolar_insert_point, fios_attributes, doc_trifilar)
-                else:
-                    insert_dxf_block_with_attributes(msp_trifilar, fios_filename, fios_block_name, insert_point_fios, fios_attributes, doc_trifilar)
-
-            # Insere a entrada do quadro no circuito central
-            if index == circuito_central_index:
-                # Não usa mais offset vertical para a entrada do quadro
-                if fases_Q == 3:
-                    entrada_tri_attributes = {
-                        'CORRENTE': str(disjuntores_gerais[nome_quadro])
-                    }
-                    insert_point_entrada_tri = (x_offset, y_offset)
-                    insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_tri.dxf', 'Trifi_entrada', insert_point_entrada_tri, entrada_tri_attributes, doc_trifilar)
-                elif fases_Q == 2:
-                    fios_bi_attributes = {
-                        'CORRENTE': str(disjuntores_gerais[nome_quadro])
-                    }
-                    insert_point_fios_bi = (x_offset, y_offset)
-                    insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_bi.dxf', 'Trifi_entrada', insert_point_fios_bi, fios_bi_attributes, doc_trifilar)
-                elif fases_Q == 1:
-                    fios_mono_attributes = {
-                        'CORRENTE': str(disjuntores_gerais[nome_quadro])
-                    }
-                    insert_point_fios_mono = (x_offset, y_offset)
-                    insert_dxf_block_with_attributes(msp_trifilar, 'Trifi_entrada_mono.dxf', 'Trifi_entrada', insert_point_fios_mono, fios_mono_attributes, doc_trifilar)
-            
-            # Usa o valor pré-calculado de vertical_offset para determinar o espaçamento vertical entre os circuitos
-            y_offset -= vertical_offsets[index]
-
-            quadro_min_x = -70
-            quadro_min_y = y_offset
-            quadro_max_x = 90
-            quadro_max_y = y_offset_last-30
-
-        y_offset_last = y_offset-40
-        # Adiciona o retângulo em torno do quadro
-        padding = 10
-        msp_trifilar.add_text(nome_quadro, dxfattribs={'height': 10}).set_placement((quadro_min_x-padding, quadro_max_y + 20), align=TextEntityAlignment.TOP_LEFT)
-
-        msp_trifilar.add_lwpolyline([
-            (quadro_min_x - padding, quadro_max_y + padding),
-            (quadro_max_x + padding, quadro_max_y + padding),
-            (quadro_max_x + padding, quadro_min_y - padding),
-            (quadro_min_x - padding, quadro_min_y - padding),
-            (quadro_min_x - padding, quadro_max_y + padding)
-        ], close=True)
-
-        y_offset -= 70  # Espaçamento entre diferentes quadros
-
-    output_path = 'diagrama_trifilar_ajustado.dxf'
-    doc_trifilar.saveas(output_path)
-
-    return output_path
 
 def reordenar_colunas(df):
     ordem_colunas = ['Potência', 'tensão', 'fator_potencia', 'num_fases', 'temperatura', 'num_circuitos', 'comprimento', 'queda_tensao_max_admitida', 'Quadro', 'met_instala']
@@ -1415,7 +1022,7 @@ def calcular_custo_totaldisj(df, sinapi_df1):
     df_agrupado['Custo Unitário'] = df_agrupado['Codigo'].map(custo_dict)
     # Agrupar por código e calcular a quantidade total e custo total
     df_agrupado['Custo Total'] = df_agrupado['Quantidade'] * df_agrupado['Custo Unitário']
-
+    
     return df_agrupado
 
 def escolher_quadro(circuitos, sinapi_quadros):
@@ -1428,18 +1035,18 @@ def calcular_custo_totalquadros(df, sinapi_df1):
     # Criar um dicionário para mapeamento
     custo_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['CUSTO TOTAL'].to_dict()
     nome_dict = sinapi_df1.set_index('CODIGO  DA COMPOSICAO')['DESCRICAO DA COMPOSICAO'].to_dict()
-
+    
     # Mapear os custos totais e descrições para cada código no DataFrame df
     df['Descrição da Composição'] = df['Codigo'].map(nome_dict)
     df['Custo Unitário'] = df['Codigo'].map(custo_dict)
-
+    
     # Agrupar por código e calcular a quantidade total e custo total
     df_agrupado = df['Codigo'].value_counts().reset_index()
     df_agrupado.columns = ['Codigo', 'Quantidade']
     df_agrupado['Descrição da Composição'] = df_agrupado['Codigo'].map(nome_dict)
     df_agrupado['Custo Unitário'] = df_agrupado['Codigo'].map(custo_dict)
     df_agrupado['Custo Total'] = df_agrupado['Quantidade'] * df_agrupado['Custo Unitário']
-
+    
     return df_agrupado
 
 if uploaded_file_dados and st.button('Calcular Parâmetros'):
@@ -1500,13 +1107,13 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             df_terra = df_selecionado[['Codigo SINAPI Condutor de Terra', 'Comprimento terra']].dropna().rename(
                 columns={'Codigo SINAPI Condutor de Terra': 'Codigo', 'Comprimento terra': 'Quantidade'}
             )
-
+            
             # Concatenar os DataFrames
             df_conductors = pd.concat([df_fase, df_neutro, df_terra])
             # Somar as quantidades por código
             df_conductors = df_conductors.groupby('Codigo', as_index=False).sum()
             print(df_conductors)
-
+            
             custos_df=calcular_custo_total(df_conductors,sinapi_df)
             df_disjuntoresaux = df_selecionado.apply(get_disjuntor_sinapi, axis=1)
             df_disjuntores = df_disjuntoresaux.to_frame(name='Codigo')
@@ -1515,14 +1122,6 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             df_custosconcat = pd.concat([custo_total_quadros, custos_disj, custos_df], axis=0, ignore_index=True)
             print(custos_df)
             st.write(df_selecionado[['Nome do Circuito','Seção do Condutor (mm²)','Disjuntor','Quantidade de condutor fase','Seção do Condutor Neutro (mm²)','Comprimento neutro','Seção do Condutor de Terra (mm²)','Comprimento terra']])
-            
-            # Exibir tabela de balanceamento de cargas
-            st.subheader('Balanceamento de Cargas')
-            df_balanceamento = calcular_balanceamento_cargas(exemplos_circuitos)
-            exibir_tabela_balanceamento(df_balanceamento)
-            
-            # A função exibir_tabela_balanceamento já inclui a exibição do gráfico de pizza
-            
             st.subheader('Orçamento com Base SINAPI')
             st.write(df_custosconcat)
             total_custo = df_custosconcat['Custo Total'].sum()
@@ -1533,15 +1132,12 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
             ))
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
-            output_path_unifilar = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
-            output_path_trifilar = gerar_diagrama_trifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
-            st.success(f"Diagramas salvos em {output_path_unifilar} e {output_path_trifilar}")
+            output_path = gerar_diagrama_unifilar(exemplos_circuitos,disjuntoresgerais,fases_QD)
+            st.success(f"Diagrama salvo em {output_path}")
             st.success(f"Memorial de Cálculo salvo em memcalc.tex")
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             with col1:
-                st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path_unifilar, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
-            with col2:
-                st.download_button(label="Baixar Diagrama Trifilar", data=open(output_path_trifilar, "rb").read(), file_name='diagrama_trifilar_ajustado.dxf')
+                st.download_button(label="Baixar Diagrama Unifilar", data=open(output_path, "rb").read(), file_name='diagrama_unifilar_ajustado.dxf')
             caminho_arquivo = 'memcalc'  # Caminho completo do arquivo latex ser gerado
             disjuntoresgerais=calcular_disjuntor_geral(exemplos_circuitos,data_tables['FatordeDemanda'],127)
             disjQGBT=calcular_disjuntor_qgbt(disjuntoresgerais,data_tables['FatordeDemanda'],127)
@@ -1579,6 +1175,6 @@ if uploaded_file_dados and st.button('Calcular Parâmetros'):
                     5. Após o upload, o projeto será aberto no editor do Overleaf, onde você poderá visualizar e editar o documento em LaTeX.
                 """
                 ))
-
+            
 else:
     st.warning('Por favor, faça o upload dos arquivos necessários para calcular os parâmetros dos circuitos.')
