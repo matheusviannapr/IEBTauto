@@ -179,7 +179,7 @@ def calcular_parametros_circuitos(lista_circuitos, data_tables):
 # 3) Escolha do disjuntor garantindo Ib ≤ In ≤ Iz,
 #    aumentando seção se precisar (volta com a seção final aceita)
         disjuntor, secao_final = escolher_disjuntor_seguro(
-            corrente_corrigida=currente_corrigida,
+            corrente_corrigida=corrente_corrigida,
             secao_inicial=secao_queda,
             tabela_disjuntores=data_tables['valores nominais de disjuntores'],
             tabela_capacidade=data_tables['Capacidade de corrente'],
