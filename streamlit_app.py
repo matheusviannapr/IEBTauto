@@ -55,32 +55,84 @@ def encontrar_capacidade_corrente(secao_condutor, tabela_capacidade, metodo_inst
     capacidade = tabela_capacidade.loc[tabela_capacidade['Seção do condutor'] == secao_condutor, coluna_capacidade].iloc[0]
     return capacidade
 
-def determinar_disjuntor(corrente_corrigida, secao_final, tabela_disjuntores, tabela_capacidade, metodo_instalacao, numero_fases):
-    capacidade_condutor = encontrar_capacidade_corrente(secao_final, tabela_capacidade, metodo_instalacao)
-    
-    # Definindo o tipo de disjuntor baseado no número de fases
+def _proxima_secao_maior(secao_atual, tabela_capacidade):
+    secoes = sorted(tabela_capacidade['Seção do condutor'].unique())
+    for s in secoes:
+        if s > secao_atual:
+            return s
+    return None  # não há maior
+
+def _capacidade_da_secao(secao, tabela_capacidade, metodo_instalacao):
+    colunas_validas = [c for c in tabela_capacidade.columns if metodo_instalacao in c]
+    if not colunas_validas:
+        raise ValueError(f"Método de instalação '{metodo_instalacao}' não encontrado na tabela.")
+    col = colunas_validas[0]
+    linha = tabela_capacidade.loc[tabela_capacidade['Seção do condutor'] == secao]
+    if linha.empty:
+        raise ValueError(f"Seção {secao} mm² não encontrada na tabela de capacidade.")
+    return float(linha[col].iloc[0])
+
+def _disjuntores_padrao_por_tipo(tabela_disjuntores, numero_fases):
     if numero_fases == 1:
-        tipo_disjuntor = 'Monopolar'
+        tipo = 'Monopolar'
     elif numero_fases == 2:
-        tipo_disjuntor = 'Bipolar'
+        tipo = 'Bipolar'
     elif numero_fases == 3:
-        tipo_disjuntor = 'Tripolar'
+        tipo = 'Tripolar'
     else:
         raise ValueError("Número de fases inválido. Deve ser 1, 2 ou 3.")
-    
-    # Filtrando a tabela de disjuntores de acordo com o tipo
-    tabela_disjuntores_filtrada = tabela_disjuntores[tabela_disjuntores['Tipo de disjuntor'] == tipo_disjuntor]
-    
-    # Ordenando a tabela filtrada pela corrente nominal
-    tabela_disjuntores_ordenada = tabela_disjuntores_filtrada.sort_values(by='Corrente nominal')
-    
-    # Iterando pela tabela ordenada para encontrar o disjuntor adequado
-    for index, disjuntor in tabela_disjuntores_ordenada.iterrows():
-        if corrente_corrigida < disjuntor['Corrente nominal'] < capacidade_condutor:
-            return disjuntor['Corrente nominal']
-    
-    # Caso não encontre um disjuntor adequado
-    return None
+
+    df = tabela_disjuntores[tabela_disjuntores['Tipo de disjuntor'] == tipo].copy()
+    if df.empty:
+        raise ValueError(f"Não há disjuntores cadastrados para o tipo '{tipo}'.")
+    return sorted(df['Corrente nominal'].unique())
+
+def escolher_disjuntor_seguro(corrente_corrigida,
+                              secao_inicial,
+                              tabela_disjuntores,
+                              tabela_capacidade,
+                              metodo_instalacao,
+                              numero_fases,
+                              fator_sobra=1.00):
+    """
+    Retorna (In_escolhido, secao_final_ajustada).
+    Garante a relação Ib ≤ In ≤ Iz; aumenta a seção se necessário.
+    fator_sobra: opcional (ex.: 1.10 para folga).
+    """
+    exigida = float(corrente_corrigida) * float(fator_sobra)
+    secoes_ordenadas = sorted(tabela_capacidade['Seção do condutor'].unique())
+    if secao_inicial not in secoes_ordenadas:
+        raise ValueError(f"Seção inicial {secao_inicial} mm² fora da tabela.")
+
+    secoes_idx = secoes_ordenadas.index(secao_inicial)
+    secoes_para_testar = secoes_ordenadas[secoes_idx:]  # começa na inicial e vai aumentando
+
+    padroes = _disjuntores_padrao_por_tipo(tabela_disjuntores, numero_fases)
+
+    for secao in secoes_para_testar:
+        Iz = _capacidade_da_secao(secao, tabela_capacidade, metodo_instalacao)
+
+        # pega o menor disjuntor padrão ≥ exigida
+        In_candidates = [x for x in padroes if x >= exigida]
+
+        if not In_candidates:
+            # nem o maior disjuntor padrão atende à corrente exigida -> precisamos aumentar a seção
+            # (segue o loop para próxima seção)
+            continue
+
+        In_escolhido = In_candidates[0]
+
+        if In_escolhido <= Iz:
+            return In_escolhido, secao  # achou combinação válida (Ib ≤ In ≤ Iz)
+
+        # caso contrário, aumenta a seção e tenta de novo
+        # (segue o loop)
+
+    # Se chegou aqui, nem com a maior seção disponível coube
+    raise ValueError(
+        f"Não foi possível selecionar disjuntor seguro: corrente corrigida={corrente_corrigida:.2f} A, "
+        f"mesmo com a maior seção disponível."
+    )
 
 def calcular_queda_tensao(corrente_nominal, comprimento, secao_condutor, tabela_queda_tensao):
     valor_queda_tensao = tabela_queda_tensao.loc[tabela_queda_tensao['seção do condutor'] == secao_condutor, 'Queda de tensão (V/A.km)'].iloc[0]
@@ -112,9 +164,36 @@ def calcular_parametros_circuitos(lista_circuitos, data_tables):
         corrente_corrigida = corrente_nominal / (fator_correcao_temp * fator_agrupamento)
         installmet=circuito['num_fases1']
 
-        secao_inicial = determinar_secao_condutor(corrente_corrigida, data_tables['Capacidade de corrente'], circuito['met_instala'], circuito['nome'])
-        secao_final, queda_tensao_final = ajustar_condutor_queda_tensao(corrente_nominal, circuito['comprimento'], secao_inicial, circuito['queda_tensao_max_admitida'], data_tables['Capacidade de corrente'], data_tables['queda de tensão'])
-        disjuntor = determinar_disjuntor(corrente_corrigida, secao_final, data_tables['valores nominais de disjuntores'], data_tables['Capacidade de corrente'], circuito['met_instala'],circuito['num_fases'])
+        secao_inicial = determinar_secao_condutor(corrente_corrigida,
+                                          data_tables['Capacidade de corrente'],
+                                          circuito['met_instala'],
+                                          circuito['nome'])
+
+# 2) Ajuste por queda de tensão (pode aumentar a seção)
+        secao_queda, queda_tensao_final = ajustar_condutor_queda_tensao(
+            corrente_nominal, circuito['comprimento'], secao_inicial,
+            circuito['queda_tensao_max_admitida'],
+            data_tables['Capacidade de corrente'], data_tables['queda de tensão']
+        )
+
+# 3) Escolha do disjuntor garantindo Ib ≤ In ≤ Iz,
+#    aumentando seção se precisar (volta com a seção final aceita)
+        disjuntor, secao_final = escolher_disjuntor_seguro(
+            corrente_corrigida=currente_corrigida,
+            secao_inicial=secao_queda,
+            tabela_disjuntores=data_tables['valores nominais de disjuntores'],
+            tabela_capacidade=data_tables['Capacidade de corrente'],
+            metodo_instalacao=circuito['met_instala'],
+            numero_fases=circuito['num_fases'],
+            fator_sobra=1.00  # pode usar 1.10 se quiser folga
+        )
+
+# 4) (opcional) Se a seção foi aumentada no passo 3, recalcule a queda de tensão
+        if secao_final != secao_queda:
+            queda_tensao_final = calcular_queda_tensao(
+                corrente_nominal, circuito['comprimento'], secao_final,
+                data_tables['queda de tensão']
+            )
 
         resultados.append({
             "Nome do Circuito": circuito['nome'],
