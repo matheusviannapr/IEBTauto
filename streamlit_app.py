@@ -940,23 +940,34 @@ faseslabel = [
     "F+F+F+T"
 ]
 temp = [10, 15, 20, 25, 35, 40, 45]
-config = {
-    "nome": st.column_config.TextColumn("Nome do Circuito", required=True),
-    "potencia": st.column_config.NumberColumn("Potência Nominal"),
-    "tensao": st.column_config.NumberColumn("Tensão Nominal"),
-    "fator_potencia": st.column_config.NumberColumn("Fator de Potência"),
-    "num_fases1": st.column_config.SelectboxColumn("Número de Fases",options=faseslabel),
-    "temperatura": st.column_config.SelectboxColumn("Temperatura", options=temp),
-    "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
-    "comprimento": st.column_config.NumberColumn("Comprimento (m)"),
-    "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
-    "DR": st.column_config.CheckboxColumn("Área molhada"),
-    "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
-}
+sample_data_df = pd.DataFrame(sample_data)
 
+if hasattr(st, "column_config"):
+    config = {
+        "nome": st.column_config.TextColumn("Nome do Circuito", required=True),
+        "potencia": st.column_config.NumberColumn("Potência Nominal"),
+        "tensao": st.column_config.NumberColumn("Tensão Nominal"),
+        "fator_potencia": st.column_config.NumberColumn("Fator de Potência"),
+        "num_fases1": st.column_config.SelectboxColumn("Número de Fases", options=faseslabel),
+        "temperatura": st.column_config.SelectboxColumn("Temperatura", options=temp),
+        "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
+        "comprimento": st.column_config.NumberColumn("Comprimento (m)"),
+        "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
+        "DR": st.column_config.CheckboxColumn("Área molhada"),
+        "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
+    }
+    edited_circuitos = st.data_editor(sample_data_df, column_config=config, num_rows="dynamic")
+else:
+    st.warning("Sua versão do Streamlit não suporta column_config. Usando editor em modo compatível.")
+    if hasattr(st, "data_editor"):
+        edited_circuitos = st.data_editor(sample_data_df, num_rows="dynamic")
+    else:
+        edited_circuitos = st.experimental_data_editor(sample_data_df, num_rows="dynamic")
 
-uploaded_file_circuitos = st.data_editor(sample_data, column_config=config, num_rows="dynamic")
-
+if isinstance(edited_circuitos, pd.DataFrame):
+    uploaded_file_circuitos = edited_circuitos.to_dict(orient="records")
+else:
+    uploaded_file_circuitos = edited_circuitos
 
 print("Tipo do objeto:", type(uploaded_file_circuitos))
 
