@@ -7,6 +7,7 @@ from ezdxf.enums import TextEntityAlignment
 from pylatex import Document, Section, Command, Package, Subsection
 from pylatex.utils import NoEscape
 import requests
+import json
 # Funções para cálculos elétricos
 def calcular_corrente_nominal(potencia, tensao, fator_potencia, num_fases):
     if num_fases == 1:
@@ -957,17 +958,29 @@ if hasattr(st, "column_config"):
         "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
     }
     edited_circuitos = st.data_editor(sample_data_df, column_config=config, num_rows="dynamic")
-else:
-    st.warning("Sua versão do Streamlit não suporta column_config. Usando editor em modo compatível.")
-    if hasattr(st, "data_editor"):
-        edited_circuitos = st.data_editor(sample_data_df, num_rows="dynamic")
-    else:
-        edited_circuitos = st.experimental_data_editor(sample_data_df, num_rows="dynamic")
 
-if isinstance(edited_circuitos, pd.DataFrame):
-    uploaded_file_circuitos = edited_circuitos.to_dict(orient="records")
+    if isinstance(edited_circuitos, pd.DataFrame):
+        uploaded_file_circuitos = edited_circuitos.to_dict(orient="records")
+    else:
+        uploaded_file_circuitos = edited_circuitos
 else:
-    uploaded_file_circuitos = edited_circuitos
+    st.warning("Sua versão do Streamlit é antiga. Usando editor JSON compatível para evitar erros de renderização.")
+    raw_json = st.text_area(
+        "Circuitos (JSON)",
+        value=json.dumps(sample_data, ensure_ascii=False, indent=2),
+        height=320,
+        help="Edite os circuitos em formato JSON (lista de objetos)."
+    )
+    try:
+        parsed = json.loads(raw_json)
+        if not isinstance(parsed, list):
+            st.error("O JSON deve ser uma lista de circuitos.")
+            uploaded_file_circuitos = sample_data.copy()
+        else:
+            uploaded_file_circuitos = parsed
+    except json.JSONDecodeError:
+        st.error("JSON inválido. Usando dados de exemplo.")
+        uploaded_file_circuitos = sample_data.copy()
 
 print("Tipo do objeto:", type(uploaded_file_circuitos))
 
