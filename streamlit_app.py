@@ -964,7 +964,7 @@ if hasattr(st, "column_config"):
     else:
         uploaded_file_circuitos = edited_circuitos
 else:
-    st.warning("Sua versão do Streamlit é antiga. Usando editor JSON compatível para evitar erros de renderização.")
+    st.info("Modo de compatibilidade ativado: edição de circuitos em JSON.")
     raw_json = st.text_area(
         "Circuitos (JSON)",
         value=json.dumps(sample_data, ensure_ascii=False, indent=2),
