@@ -2,6 +2,7 @@ numpy
 pandas
 ezdxf
 streamlit
+pyarrow<15
 altair<5
 mitosheet
 pylatex
