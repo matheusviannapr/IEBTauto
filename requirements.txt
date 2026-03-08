@@ -1,8 +1,8 @@
 numpy<2
-pandas
+pandas<2
 ezdxf
-streamlit
-pyarrow<15
+streamlit==1.29.0
+pyarrow<12
 altair<5
 mitosheet
 pylatex
