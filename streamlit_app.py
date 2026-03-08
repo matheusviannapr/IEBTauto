@@ -943,28 +943,37 @@ faseslabel = [
 temp = [10, 15, 20, 25, 35, 40, 45]
 sample_data_df = pd.DataFrame(sample_data)
 
-if hasattr(st, "column_config"):
-    config = {
-        "nome": st.column_config.TextColumn("Nome do Circuito", required=True),
-        "potencia": st.column_config.NumberColumn("Potência Nominal"),
-        "tensao": st.column_config.NumberColumn("Tensão Nominal"),
-        "fator_potencia": st.column_config.NumberColumn("Fator de Potência"),
-        "num_fases1": st.column_config.SelectboxColumn("Número de Fases", options=faseslabel),
-        "temperatura": st.column_config.SelectboxColumn("Temperatura", options=temp),
-        "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
-        "comprimento": st.column_config.NumberColumn("Comprimento (m)"),
-        "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
-        "DR": st.column_config.CheckboxColumn("Área molhada"),
-        "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
-    }
-    edited_circuitos = st.data_editor(sample_data_df, column_config=config, num_rows="dynamic")
+editor_fn = getattr(st, "data_editor", None) or getattr(st, "experimental_data_editor", None)
+
+if editor_fn:
+    config = None
+    if hasattr(st, "column_config"):
+        config = {
+            "nome": st.column_config.TextColumn("Nome do Circuito", required=True),
+            "potencia": st.column_config.NumberColumn("Potência Nominal"),
+            "tensao": st.column_config.NumberColumn("Tensão Nominal"),
+            "fator_potencia": st.column_config.NumberColumn("Fator de Potência"),
+            "num_fases1": st.column_config.SelectboxColumn("Número de Fases", options=faseslabel),
+            "temperatura": st.column_config.SelectboxColumn("Temperatura", options=temp),
+            "num_circuitos": st.column_config.NumberColumn("Número de Circuitos Agrupados"),
+            "comprimento": st.column_config.NumberColumn("Comprimento (m)"),
+            "met_instala": st.column_config.SelectboxColumn("Método de Instalação", options=methods),
+            "DR": st.column_config.CheckboxColumn("Área molhada"),
+            "Quadro": st.column_config.TextColumn("Nome do Quadro", required=True)
+        }
+
+    editor_kwargs = {"num_rows": "dynamic"}
+    if config is not None:
+        editor_kwargs["column_config"] = config
+
+    edited_circuitos = editor_fn(sample_data_df, **editor_kwargs)
 
     if isinstance(edited_circuitos, pd.DataFrame):
         uploaded_file_circuitos = edited_circuitos.to_dict(orient="records")
     else:
         uploaded_file_circuitos = edited_circuitos
 else:
-    st.info("Modo de compatibilidade ativado: edição de circuitos em JSON.")
+    st.info("Seu Streamlit é muito antigo para editor em tabela. Atualize para usar edição tabular.")
     raw_json = st.text_area(
         "Circuitos (JSON)",
         value=json.dumps(sample_data, ensure_ascii=False, indent=2),
