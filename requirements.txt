@@ -1,7 +1,9 @@
-numpy
-pandas
+numpy<2
+pandas<2
 ezdxf
-streamlit
+streamlit==1.29.0
+pyarrow<12
+altair<5
 mitosheet
 pylatex
 xlrd
