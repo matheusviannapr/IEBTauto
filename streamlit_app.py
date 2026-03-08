@@ -8,6 +8,12 @@ from pylatex import Document, Section, Command, Package, Subsection
 from pylatex.utils import NoEscape
 import requests
 import json
+
+# Evita erros de compatibilidade Arrow no data_editor (ex.: LargeUtf8)
+try:
+    st.set_option("global.dataFrameSerialization", "legacy")
+except Exception:
+    pass
 # Funções para cálculos elétricos
 def calcular_corrente_nominal(potencia, tensao, fator_potencia, num_fases):
     if num_fases == 1:
