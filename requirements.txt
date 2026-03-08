@@ -1,7 +1,9 @@
-numpy
+numpy<2
 pandas
 ezdxf
 streamlit
+pyarrow<15
+altair<5
 mitosheet
 pylatex
 xlrd
